@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # DIY GNU/Linux from source - one standalone script, x86_64 / i686 / ARM64.
 #
 # Usage: English by default; add --LT for Lithuanian.
@@ -20,7 +21,7 @@ if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4) ))
     exit 2
 fi
 set -Eeuo pipefail
-DIY_VERSION=1.1.209
+DIY_VERSION=1.1.210
 # Inline translation: English first, Lithuanian second. No external catalog required.
 tr_text() {
     if [ "${DIY_LANG:-en}" = lt ]; then printf '%s' "$2"; else printf '%s' "$1"; fi
