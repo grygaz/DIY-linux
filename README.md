@@ -4,6 +4,8 @@
 
 Build a small Linux system from source with a single Bash script: [`diy-linux.sh`](diy-linux.sh). The script downloads pinned sources, verifies SHA-256 checksums, builds a cross toolchain and root filesystem, and creates boot images. It does not use Buildroot.
 
+> **Beta software for learning and experimentation.** DIY Linux is for Linux enthusiasts who want to explore how a system is built and compiled from source. It is inspired by the learning approach of Linux From Scratch (LFS) and source-based systems such as Gentoo, while remaining an independent project with its own recipes. It is not a production-ready distribution; expect unsupported combinations, build failures, and manual troubleshooting.
+
 Builder version: **1.1.210** (`bash diy-linux.sh --version`). The version is shown at startup and is incremented with every script update.
 
 All build recipes are embedded in `diy-linux.sh`. You can copy that file elsewhere and run it on its own. No previous build files or development fixtures are required. Downloads, build directories, and toolchains are created when needed.
