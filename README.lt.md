@@ -4,6 +4,8 @@
 
 Nedidelės Linux sistemos kūrimas iš šaltinių vienu Bash skriptu: [`diy-linux.sh`](diy-linux.sh). Skriptas atsisiunčia nustatytų versijų šaltinius, patikrina SHA-256 kontrolines sumas, sukuria kryžminio kompiliavimo įrankius (toolchain), šakninę failų sistemą ir paleidimo atvaizdus. Buildroot nenaudojamas.
 
+> **Beta versija mokymuisi ir eksperimentams.** DIY Linux skirta Linux entuziastams, norintiems suprasti, kaip sistema kuriama ir kompiliuojama iš šaltinių. Projektas semiasi įkvėpimo iš Linux From Scratch (LFS) mokymosi principo ir tokių iš šaltinių kuriamų sistemų kaip Gentoo, tačiau yra nepriklausomas ir turi savus receptus. Tai nėra paruošta kasdieniam naudojimui distribucija: gali pasitaikyti nepalaikomų derinių, kompiliavimo klaidų ir prireikti rankinio taisymo.
+
 Scenarijaus versija: **1.1.210** (`bash diy-linux.sh --version`). Versija rodoma paleidus scenarijų ir didinama su kiekvienu scenarijaus atnaujinimu.
 
 Visi kūrimo receptai įtraukti į `diy-linux.sh`. Šį failą galima perkelti kitur ir paleisti atskirai. Ankstesni kūrimo ar bandymų failai nereikalingi. Atsisiuntimų, kompiliavimo ir toolchain katalogai sukuriami prireikus.
