@@ -67,6 +67,6 @@ Then start a build from the same settings by using the menu or `--build`. Use `-
 
 The builder is for experimentation and learning. Bug reports are most useful when they include the exact script version, selected settings, host details, the failing stage, and the relevant part of `build.log` or `qemu-boot.log`. Do not attach passwords, private keys, personal files, or unrelated desktop screenshots.
 
-**Version in this snapshot:** `1.1.209`.
+**Version in this snapshot:** `1.1.210`.
 
-**License:** no license file is included in this snapshot. Until a license is chosen and added, do not assume the code is licensed for reuse or redistribution.
+**License:** GNU General Public License v3.0 or later (`GPL-3.0-or-later`); see [LICENSE](LICENSE).
