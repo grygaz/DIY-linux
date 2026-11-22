@@ -14,6 +14,8 @@
 # Pavyzdys: https://github.com/adityatelange/diy-build-custom-minimal-linux-distribution-source
 # Kūrimas nevykdomas chroot; kryžminis kompiliatorius naudoja atskirą sysroot.
 # Niekada nekeičiamas šeimininko /bin/sh ir niekada neįdiegiama į jo /usr.
+# Beta educational project for Linux enthusiasts learning source builds (LFS/Gentoo-inspired).
+# Independent and experimental; not intended as a production distribution.
 # Visas kompiliavimas ir paleidimas dar nepatvirtinti. --self-test nėra boot testas.
 
 if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4) )); then
@@ -21,7 +23,13 @@ if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4) ))
     exit 2
 fi
 set -Eeuo pipefail
-DIY_VERSION=1.1.210
+# Some desktop sessions omit the standard sbin paths for non-root users.
+# The builder needs host utilities such as losetup and sfdisk for BIOS images.
+for system_sbin in /usr/sbin /sbin; do
+    [[ ":${PATH:-}:" == *":$system_sbin:"* ]] || PATH="$system_sbin:${PATH:-}"
+done
+export PATH
+DIY_VERSION=1.1.235
 # Inline translation: English first, Lithuanian second. No external catalog required.
 tr_text() {
     if [ "${DIY_LANG:-en}" = lt ]; then printf '%s' "$2"; else printf '%s' "$1"; fi
@@ -88,7 +96,7 @@ export -n TARGET_ARCH
 SHELL_CHOICE=${SHELL_CHOICE:-bash}       # busybox | bash | dash | zsh | fish
 TOOLS_CHOICE=${TOOLS_CHOICE:-gnu}        # busybox | gnu
 INIT_CHOICE=${INIT_CHOICE:-openrc}       # busybox | openrc | runit | dinit | sysvinit | s6 | systemd
-DESKTOP_CHOICE=${DESKTOP_CHOICE:-none}    # none | mate | lxde | fluxbox (Xorg)
+DESKTOP_CHOICE=${DESKTOP_CHOICE:-none}    # none | x11 (terminal only) | mate | lxde | fluxbox | cinnamon (Xorg)
 PACKAGE_MANAGER=${PACKAGE_MANAGER:-none} # none | apt (su dpkg) | pacman
 WITH_GCC=${WITH_GCC:-no}                 # GCC galutinėje sistemoje: yes | no
 BOOT_CHOICE=${BOOT_CHOICE:-bios}         # bios | uefi | none (tik archyvai)
@@ -138,7 +146,7 @@ WORK_DIR=${WORK_DIR:-"$PWD/diy-linux-work"}
 DEFAULT_WORK_DIR=$WORK_DIR
 ROOT_PASSWORD_HASH=${ROOT_PASSWORD_HASH:-!}  # ! = užrakinta root paskyra
 USER_NAME=${USER_NAME:-user}              # Paprastas vartotojas su sudo teisėmis
-USER_PASSWORD_HASH=${USER_PASSWORD_HASH:-$ROOT_PASSWORD_HASH}
+USER_PASSWORD_HASH=${USER_PASSWORD_HASH:-!}
 
 
 # Papildomos programos: yes įtraukia, no praleidžia.
@@ -262,6 +270,7 @@ VERSION[glib]='2.84.4'; URL[glib]='https://download.gnome.org/sources/glib/2.84/
 VERSION[pango]='1.56.4'; URL[pango]='https://download.gnome.org/sources/pango/1.56/pango-1.56.4.tar.xz'; SHA[pango]='17065e2fcc5f5a5bdbffc884c956bfc7c451a96e8c4fb2f8ad837c6413cb5a01'
 VERSION[gdk-pixbuf]='2.42.12'; URL[gdk-pixbuf]='https://download.gnome.org/sources/gdk-pixbuf/2.42/gdk-pixbuf-2.42.12.tar.xz'; SHA[gdk-pixbuf]='b9505b3445b9a7e48ced34760c3bcb73e966df3ac94c95a148cb669ab748e3c7'
 VERSION[at-spi2-core]='2.56.4'; URL[at-spi2-core]='https://download.gnome.org/sources/at-spi2-core/2.56/at-spi2-core-2.56.4.tar.xz'; SHA[at-spi2-core]='dbe35b951499e1d6f1fb552c2e0a09cea7cba2adf6c2eba0b2c85b6c094a3a02'
+VERSION[atk]='2.38.0'; URL[atk]='https://download.gnome.org/sources/atk/2.38/atk-2.38.0.tar.xz'; SHA[atk]='ac4de2a4ef4bd5665052952fe169657e65e895c5057dffb3c2a810f6191a0c36'
 VERSION[gtk]='3.24.50'; URL[gtk]='https://download.gnome.org/sources/gtk/3.24/gtk-3.24.50.tar.xz'; SHA[gtk]='399118a5699314622165a11b769ea9b6ed68e037b6d46d57cfcf4851dec07529'
 VERSION[libwnck]='43.2'; URL[libwnck]='https://download.gnome.org/sources/libwnck/43/libwnck-43.2.tar.xz'; SHA[libwnck]='55a7444ec1fbb95c086d40967388f231b5c0bbc8cffaa086bf9290ae449e51d5'
 VERSION[adwaita-icon-theme]='43'; URL[adwaita-icon-theme]='https://download.gnome.org/sources/adwaita-icon-theme/43/adwaita-icon-theme-43.tar.xz'; SHA[adwaita-icon-theme]='2e3ac77d32a6aa5554155df37e8f0a0dd54fc5a65fd721e88d505f970da32ec6'
@@ -293,6 +302,8 @@ VERSION[xorgproto]='2024.1'; URL[xorgproto]='https://ftp.osuosl.org/pub/blfs/con
 VERSION[libXau]='1.0.12'; URL[libXau]='https://ftp.osuosl.org/pub/blfs/conglomeration/Xorg/libXau-1.0.12.tar.xz'; SHA[libXau]='74d0e4dfa3d39ad8939e99bda37f5967aba528211076828464d2777d477fc0fb'
 VERSION[libXdmcp]='1.1.5'; URL[libXdmcp]='https://ftp.osuosl.org/pub/blfs/conglomeration/Xorg/libXdmcp-1.1.5.tar.xz'; SHA[libXdmcp]='d8a5222828c3adab70adf69a5583f1d32eb5ece04304f7f8392b6a353aa2228c'
 VERSION[libxcb]='1.17.0'; URL[libxcb]='https://ftp.osuosl.org/pub/blfs/conglomeration/Xorg/libxcb-1.17.0.tar.xz'; SHA[libxcb]='599ebf9996710fea71622e6e184f3a8ad5b43d0e5fa8c4e407123c88a59a6d55'
+VERSION[xcb-util]='0.4.1'; URL[xcb-util]='https://xorg.freedesktop.org/releases/individual/xcb/xcb-util-0.4.1.tar.xz'; SHA[xcb-util]='5abe3bbbd8e54f0fa3ec945291b7e8fa8cfd3cccc43718f8758430f94126e512'
+VERSION[libdbusmenu]='18.10.20180917~bzr492+repack1'; URL[libdbusmenu]='https://deb.debian.org/debian/pool/main/libd/libdbusmenu/libdbusmenu_18.10.20180917~bzr492+repack1.orig.tar.xz'; SHA[libdbusmenu]='41298b926573419f21864205317461750b833c596af6ab0bd206e13336f8cee3'
 VERSION[xcb-proto]='1.17.0'; URL[xcb-proto]='https://ftp.osuosl.org/pub/blfs/conglomeration/Xorg/xcb-proto-1.17.0.tar.xz'; SHA[xcb-proto]='2c1bacd2110f4799f74de6ebb714b94cf6f80fb112316b1219480fd22562148c'
 VERSION[libX11]='1.8.12'; URL[libX11]='https://distfiles.macports.org/xorg-libX11/libX11-1.8.12.tar.xz'; SHA[libX11]='fa026f9bb0124f4d6c808f9aef4057aad65e7b35d8ff43951cef0abe06bb9a9a'
 VERSION[libXext]='1.3.6'; URL[libXext]='https://artfiles.org/x.org/pub/individual/lib/libXext-1.3.6.tar.xz'; SHA[libXext]='edb59fa23994e405fdc5b400afdf5820ae6160b94f35e3dc3da4457a16e89753'
@@ -350,6 +361,44 @@ VERSION[lxde-common]='0.99.4'; URL[lxde-common]='https://github.com/lxde/release
 VERSION[geany]='2.1'; URL[geany]='https://download.geany.org/geany-2.1.tar.gz'; SHA[geany]='8da944e82f78f3c4c6e6b054b7c562ab64ea37d4a3e7dc8576bed8a8160d3c2a'
 VERSION[firefox]='158.0'; URL[firefox]='https://archive.mozilla.org/pub/firefox/releases/158.0/linux-x86_64/en-US/firefox-158.0.tar.xz'; SHA[firefox]='9549b054ec4cf85f50f6a19d8c6fb79580312e71ebc4ec2cb217ec9af09dc12a'
 # END SHARED DESKTOP SOURCES
+# Cinnamon 6.6 stable desktop components. The separate cinnamon-screensaver
+# project is intentionally not included in this profile.
+VERSION[cinnamon]='6.6.9'; URL[cinnamon]='https://codeload.github.com/linuxmint/Cinnamon/tar.gz/refs/tags/6.6.9'; SHA[cinnamon]='62fe4a47f727fda66b4f38a83d21b23a7ccb9f2af169a5f8e7c0b4258131d6bf'
+VERSION[cinnamon-session]='6.6.4'; URL[cinnamon-session]='https://codeload.github.com/linuxmint/cinnamon-session/tar.gz/refs/tags/6.6.4'; SHA[cinnamon-session]='a5a2e5674671921f51f4dbbceb3cb2ac1088c0591c011078f75a214bcbfd641c'
+VERSION[cinnamon-settings-daemon]='6.6.4'; URL[cinnamon-settings-daemon]='https://codeload.github.com/linuxmint/cinnamon-settings-daemon/tar.gz/refs/tags/6.6.4'; SHA[cinnamon-settings-daemon]='215006afe3e59e4998fd3bb9f8ecf1b7c926a08b5398b42e482c5008483c970a'
+VERSION[cinnamon-control-center]='6.6.0'; URL[cinnamon-control-center]='https://codeload.github.com/linuxmint/cinnamon-control-center/tar.gz/refs/tags/6.6.0'; SHA[cinnamon-control-center]='2de5fbc5a9fcc2e1dad9c595dfb1d9047ff885d391f45d6ffe8b6711bb4e24e4'
+VERSION[cinnamon-desktop]='6.6.2'; URL[cinnamon-desktop]='https://codeload.github.com/linuxmint/cinnamon-desktop/tar.gz/refs/tags/6.6.2'; SHA[cinnamon-desktop]='4ed0d52a072551c6d536f1be68d4fcdb4166454fc9e48567ab2550282086b0f4'
+VERSION[cinnamon-menus]='6.6.0'; URL[cinnamon-menus]='https://codeload.github.com/linuxmint/cinnamon-menus/tar.gz/refs/tags/6.6.0'; SHA[cinnamon-menus]='87596380720077991f58afdbbabe72d9afd10f56d64043076cf7b09bc6b0f3c1'
+VERSION[muffin]='6.6.3'; URL[muffin]='https://codeload.github.com/linuxmint/muffin/tar.gz/refs/tags/6.6.3'; SHA[muffin]='af1aa8e68699895a841415c007c7f3f48efc06f07c50d219d30f8131a981248e'
+VERSION[cjs]='6.4.0'; URL[cjs]='https://codeload.github.com/linuxmint/cjs/tar.gz/refs/tags/6.4.0'; SHA[cjs]='55d730fdb331a9778a0d569e45c968ac68c8f218876e5d2d475cb5af21b6935a'
+VERSION[nemo]='6.6.4'; URL[nemo]='https://codeload.github.com/linuxmint/nemo/tar.gz/refs/tags/6.6.4'; SHA[nemo]='258807feb2e7bac523707d6b3daf2d9439e7135123cbe795183d5aaa6fd691ed'
+VERSION[xapps]='2.8.13'; URL[xapps]='https://codeload.github.com/linuxmint/xapps/tar.gz/refs/tags/2.8.13'; SHA[xapps]='5282727e41c0fe86b22b745b3abd134a67edd7fb9337deaff762376b1f49b140'
+VERSION[python3-xapp]='3.0.4'; URL[python3-xapp]='https://deb.debian.org/debian/pool/main/p/python-xapp/python-xapp_3.0.4.orig.tar.gz'; SHA[python3-xapp]='1c874ec8374b94b921df17995b8a9be95c404048c70f1bdb1e9281a76c939b9c'
+VERSION[xapp-symbolic-icons]='1.1.2'; URL[xapp-symbolic-icons]='https://codeload.github.com/xapp-project/xapp-symbolic-icons/tar.gz/50f47ee6ec0e754449c7fc8923a014e5eb0868d9'; SHA[xapp-symbolic-icons]='877a098b4dbfd7067dd8c6faa241cb996f33536390c26cfb5eb75f6ba56c53a2'
+VERSION[cinnamon-translations]='6.6.2'; URL[cinnamon-translations]='https://codeload.github.com/linuxmint/cinnamon-translations/tar.gz/refs/tags/6.6.2'; SHA[cinnamon-translations]='88ff13650c301e015fee8678f4e0d8e83e648ca86768519ab91697c0d5f0e679'
+# Cinnamon's bundled menu editor is a Python 3 GTK application. Keep the
+# interpreter and bindings in the Cinnamon-only package set, pinned by digest.
+VERSION[python3.13]='3.13.5'; URL[python3.13]='https://www.python.org/ftp/python/3.13.5/Python-3.13.5.tar.xz'; SHA[python3.13]='93e583f243454e6e9e4588ca2c2662206ad961659863277afcdb96801647d640'
+VERSION[pycairo]='1.29.2'; URL[pycairo]='https://files.pythonhosted.org/packages/source/p/pycairo/pycairo-1.29.2.tar.gz'; SHA[pycairo]='3e69fff74fe64f5ba2dfa31f67c6bdf26413342574047437d2ac520d35e9a489'
+VERSION[pygobject]='3.58.1'; URL[pygobject]='https://files.pythonhosted.org/packages/source/p/pygobject/pygobject-3.58.1.tar.gz'; SHA[pygobject]='4c80598ade17fbaa7798e01a25d0bf29ce109740786026a074c5c62bb3e79d23'
+# Firefox ESR 115.8.0 contains the SpiderMonkey 115 engine used by CJS 6.4.
+# The Mozilla release archive includes the generated js/src configure script.
+VERSION[mozjs-115]='115.8.0'; URL[mozjs-115]='https://archive.mozilla.org/pub/firefox/releases/115.8.0esr/source/firefox-115.8.0esr.source.tar.xz'; SHA[mozjs-115]='af8086f23efc8492d286671f6035b1a915de6f4ed5c7897e40be0e1cb6b895ea'
+VERSION[graphene]='1.10.8'; URL[graphene]='https://download.gnome.org/sources/graphene/1.10/graphene-1.10.8.tar.xz'; SHA[graphene]='a37bb0e78a419dcbeaa9c7027bcff52f5ec2367c25ec859da31dfde2928f279a'
+VERSION[json-glib]='1.10.8'; URL[json-glib]='https://download.gnome.org/sources/json-glib/1.10/json-glib-1.10.8.tar.xz'; SHA[json-glib]='55c5c141a564245b8f8fbe7698663c87a45a7333c2a2c56f06f811ab73b212dd'
+VERSION[cogl]='1.22.8'; URL[cogl]='https://download.gnome.org/sources/cogl/1.22/cogl-1.22.8.tar.xz'; SHA[cogl]='a805b2b019184710ff53d0496f9f0ce6dcca420c141a0f4f6fcc02131581d759'
+VERSION[clutter]='1.26.4'; URL[clutter]='https://download.gnome.org/sources/clutter/1.26/clutter-1.26.4.tar.xz'; SHA[clutter]='8b48fac159843f556d0a6be3dbfc6b083fc6d9c58a20a49a6b4919ab4263c4e6'
+VERSION[startup-notification]='0.12'; URL[startup-notification]='https://www.freedesktop.org/software/startup-notification/releases/startup-notification-0.12.tar.gz'; SHA[startup-notification]='3c391f7e930c583095045cd2d10eb73a64f085c7fde9d260f2652c7cb3cfbe4a'
+VERSION[gcr]='3.41.2'; URL[gcr]='https://download.gnome.org/sources/gcr/3.41/gcr-3.41.2.tar.xz'; SHA[gcr]='bad10f3c553a0e1854649ab59c5b2434da22ca1a54ae6138f1f53961567e1ab7'
+VERSION[p11-kit]='0.26.2'; URL[p11-kit]='https://github.com/p11-glue/p11-kit/releases/download/0.26.2/p11-kit-0.26.2.tar.xz'; SHA[p11-kit]='09fd9f44da4813a3141e73d5e7cf7008e5660d0405f13d56c15e1da9dcecf828'
+VERSION[libtasn1]='4.20.0'; URL[libtasn1]='https://ftp.gnu.org/gnu/libtasn1/libtasn1-4.20.0.tar.gz'; SHA[libtasn1]='92e0e3bd4c02d4aeee76036b2ddd83f0c732ba4cda5cb71d583272b23587a76c'
+VERSION[libwacom]='2.19.0'; URL[libwacom]='https://github.com/linuxwacom/libwacom/releases/download/libwacom-2.19.0/libwacom-2.19.0.tar.xz'; SHA[libwacom]='8dd84e75d322aa5f33b2fe781cb67efa5706fedcf483737b4657557f33055a93'
+VERSION[libxkbcommon]='1.13.2'; URL[libxkbcommon]='https://github.com/xkbcommon/libxkbcommon/archive/xkbcommon-1.13.2.tar.gz'; SHA[libxkbcommon]='acc4d5f7c3cbba5f9f8d08d8bdbeede84ecede46792f47929aa9321873385528'
+VERSION[gsettings-desktop-schemas]='48.0'; URL[gsettings-desktop-schemas]='https://download.gnome.org/sources/gsettings-desktop-schemas/48/gsettings-desktop-schemas-48.0.tar.xz'; SHA[gsettings-desktop-schemas]='e68f155813bf18f865a8b2c8e9d473588b6ccadcafbb666ab788857c6c2d1bd3'
+VERSION[colord]='1.4.7'; URL[colord]='https://www.freedesktop.org/software/colord/releases/colord-1.4.7.tar.xz'; SHA[colord]='de02d9910634ae159547585cec414e450f711c27235453b4f9b38a9f2361a653'
+VERSION[lcms2]='2.20'; URL[lcms2]='https://github.com/mm2/Little-CMS/releases/download/lcms2.20/lcms2-2.20.tar.gz'; SHA[lcms2]='18ff5504fa9cc8a2b1f3591180d90ead16c8a2ea78e530523b46eab70e1ca6b9'
+VERSION[libgusb]='0.4.9'; URL[libgusb]='https://github.com/hughsie/libgusb/releases/download/0.4.9/libgusb-0.4.9.tar.xz'; SHA[libgusb]='9df5ef301d6a4b361002aa52cce1165a87a89744055879bdbab31e7e86f1e846'
+VERSION[libgnomekbd]='3.28.1'; URL[libgnomekbd]='https://download.gnome.org/sources/libgnomekbd/3.28/libgnomekbd-3.28.1.tar.xz'; SHA[libgnomekbd]='22dc59566d73c0065350f5a97340e62ecc7b08c4df19183804bb8be24c8fe870'
 
 # MATE 1.28 release archives, from the official MATE download server.
 VERSION[dconf]='0.40.0'; URL[dconf]='https://download.gnome.org/sources/dconf/0.40/dconf-0.40.0.tar.xz'; SHA[dconf]='cf7f22a4c9200421d8d3325c5c1b8b93a36843650c9f95d6451e20f0bcb24533'
@@ -360,9 +409,13 @@ VERSION[libtool]='2.6.2'; URL[libtool]='https://ftp.gnu.org/gnu/libtool/libtool-
 VERSION[libogg]='1.3.6'; URL[libogg]='https://downloads.xiph.org/releases/ogg/libogg-1.3.6.tar.xz'; SHA[libogg]='5c8253428e181840cd20d41f3ca16557a9cc04bad4a3d04cce84808677fa1061'
 VERSION[libvorbis]='1.3.7'; URL[libvorbis]='https://downloads.xiph.org/releases/vorbis/libvorbis-1.3.7.tar.xz'; SHA[libvorbis]='b33cc4934322bcbf6efcbacf49e3ca01aadbea4114ec9589d1b1e9d20f72954b'
 VERSION[libcanberra]='0.30'; URL[libcanberra]='https://0pointer.de/lennart/projects/libcanberra/libcanberra-0.30.tar.xz'; SHA[libcanberra]='c2b671e67e0c288a69fc33dc1b6f1b534d07882c2aceed37004bf48c601afa72'
+VERSION[gsound]='1.0.3'; URL[gsound]='https://download.gnome.org/sources/gsound/1.0/gsound-1.0.3.tar.xz'; SHA[gsound]='ca2d039e1ebd148647017a7f548862350bc9af01986d39f10cfdc8e95f07881a'
 VERSION[libglvnd]='1.7.0'; URL[libglvnd]='https://gitlab.freedesktop.org/glvnd/libglvnd/uploads/c24806c283070dc70700234ca8ffacf8/libglvnd-1.7.0.tar.gz'; SHA[libglvnd]='13ae5bb99a5a2869fbe00aadb49b21fd9c13dfbf59844b0f88d521098094d44a'
 VERSION[libxklavier]='5.4'; URL[libxklavier]='https://ftp.osuosl.org/pub/slackware/slackware64-current/source/l/libxklavier/libxklavier-5.4.tar.xz'; SHA[libxklavier]='0e5fce5db1f50ed6a8cad65dd30cbfb18271f4a2c0c1c395461e017ea7f4fc02'
 VERSION[gobject-introspection]='1.86.0'; URL[gobject-introspection]='https://download.gnome.org/sources/gobject-introspection/1.86/gobject-introspection-1.86.0.tar.xz'; SHA[gobject-introspection]='920d1a3fcedeadc32acff95c2e203b319039dd4b4a08dd1a2dfd283d19c0b9ae'
+VERSION[gobject-introspection-legacy]='1.78.1'; URL[gobject-introspection-legacy]='https://download.gnome.org/sources/gobject-introspection/1.78/gobject-introspection-1.78.1.tar.xz'; SHA[gobject-introspection-legacy]='bd7babd99af7258e76819e45ba4a6bc399608fe762d83fde3cac033c50841bb4'
+VERSION[ibus]='1.5.32'; URL[ibus]='https://github.com/ibus/ibus/releases/download/1.5.32/ibus-1.5.32.tar.gz'; SHA[ibus]='b24f41ae38b236b254c09f1a8f53c2354b69b0789e89cea888d0494b09d15d67'
+VERSION[accountsservice]='23.13.9'; URL[accountsservice]='https://www.freedesktop.org/software/accountsservice/accountsservice-23.13.9.tar.xz'; SHA[accountsservice]='adda4cdeae24fa0992e7df3ffff9effa7090be3ac233a3edfdf69d5a9c9b924f'
 VERSION[iso-codes]='4.20.1'; URL[iso-codes]='https://deb.debian.org/debian/pool/main/i/iso-codes/iso-codes_4.20.1.orig.tar.xz'; SHA[iso-codes]='5d551f3ddb32548c4321e9011720fd97751af0107592f79ebffc939bd32f2268'
 VERSION[alsa-lib]='1.2.16.1'; URL[alsa-lib]='https://www.alsa-project.org/files/pub/lib/alsa-lib-1.2.16.1.tar.bz2'; SHA[alsa-lib]='f740db7f488255944ffd4428416ee3390a96742856916433df468c281436480e'
 VERSION[alsa-utils]='1.2.16'; URL[alsa-utils]='https://www.alsa-project.org/files/pub/utils/alsa-utils-1.2.16.tar.bz2'; SHA[alsa-utils]='092399d5e8749a1d5e188e393157521cec4b75693b60ebb79bbce728cff2232c'
@@ -381,6 +434,9 @@ VERSION[network-manager-applet]='1.36.0'; URL[network-manager-applet]='https://d
 VERSION[libmnl]='1.0.5'; URL[libmnl]='https://netfilter.org/pub/libmnl/libmnl-1.0.5.tar.bz2'; SHA[libmnl]='274b9b919ef3152bfb3da3a13c950dd60d6e2bcd54230ffeca298d03b40d0525'
 VERSION[libnftnl]='1.3.2'; URL[libnftnl]='https://netfilter.org/pub/libnftnl/libnftnl-1.3.2.tar.xz'; SHA[libnftnl]='c97abc3409f8fa396b4462b2bb7f147a3a47a4ddc97cfa0b2f18890c9cfde8b0'
 VERSION[libnotify]='0.8.6'; URL[libnotify]='https://download.gnome.org/sources/libnotify/0.8/libnotify-0.8.6.tar.xz'; SHA[libnotify]='c5540aaefb60e1d63b1c587c05f2284ebe72ece7d0c0e5e4a778cfd5844b6b58'
+VERSION[libgsf]='1.14.53'; URL[libgsf]='https://download.gnome.org/sources/libgsf/1.14/libgsf-1.14.53.tar.xz'; SHA[libgsf]='0eb59a86e0c50f97ac9cfe4d8cc1969f623f2ae8c5296f2414571ff0a9e8bcba'
+VERSION[libsass]='3.6.6'; URL[libsass]='https://codeload.github.com/sass/libsass/tar.gz/refs/tags/3.6.6'; SHA[libsass]='11f0bb3709a4f20285507419d7618f3877a425c0131ea8df40fe6196129df15d'
+VERSION[sassc]='3.6.2'; URL[sassc]='https://codeload.github.com/sass/sassc/tar.gz/refs/tags/3.6.2'; SHA[sassc]='608dc9002b45a91d11ed59e352469ecc05e4f58fc1259fc9a9f5b8f0f8348a03'
 VERSION[libsoup]='2.74.3'; URL[libsoup]='https://download.gnome.org/sources/libsoup/2.74/libsoup-2.74.3.tar.xz'; SHA[libsoup]='e4b77c41cfc4c8c5a035fcdc320c7bc6cfb75ef7c5a034153df1413fa1d92f13'
 VERSION[mate-common]='1.28.0'; URL[mate-common]='https://pub.mate-desktop.org/releases/1.28/mate-common-1.28.0.tar.xz'; SHA[mate-common]='42b7c2cee268f71d7e1c1ad4f69bcda0ecd65578a96722187c6b76378d26ba0a'
 VERSION[mate-desktop]='1.28.2'; URL[mate-desktop]='https://pub.mate-desktop.org/releases/1.28/mate-desktop-1.28.2.tar.xz'; SHA[mate-desktop]='32bb4b792014b391c1e1b8ae9c18a82b4d447650984b4cba7d28e95564964aa2'
@@ -1130,6 +1186,8 @@ help_text() {
         printf 'Version: %s\n' "$DIY_VERSION"
         cat <<'HELP_EN'
 DIY Linux - a standalone source-based Linux builder (no Buildroot)
+Beta educational project for Linux enthusiasts learning to build systems from source, inspired by LFS and Gentoo.
+Independent and experimental; it is not a production-ready distribution.
 
 Usage:
   ./diy-linux.sh                       Interactive terminal menu (English)
@@ -1181,7 +1239,7 @@ Configuration (environment variables or terminal menu):
   INIT_CHOICE=busybox|openrc|runit|dinit|sysvinit|s6|systemd
   PACKAGE_MANAGER=none|apt|pacman  (APT includes dpkg)
   BOOT_CHOICE=bios|uefi|syslinux|lilo|refind|efistub|limine|systemd-boot|none
-  DESKTOP_CHOICE=none|mate|lxde|fluxbox
+  DESKTOP_CHOICE=none|x11|mate|lxde|fluxbox|cinnamon
   KEEP_ROOTFS_TAR=yes|no  Also create the optional rootfs.tar.gz export
   WITH_GCC=yes|no         Include native development tools in the final system
   NETWORK=yes|no          DHCP networking
@@ -1258,9 +1316,8 @@ Enter opens an entry, Space toggles options; Help explains each choice.
 
 User passwords:
   The menu prompts for passwords locally. Root is locked by default.
-  --build accounts stay locked unless password hashes are supplied:
-  USER_PASSWORD_HASH="$(openssl passwd -6)" bash diy-linux.sh --build
-  ROOT_PASSWORD_HASH="$(openssl passwd -6)" bash diy-linux.sh --build
+  --build accounts stay locked unless separate password hashes are supplied:
+  USER_PASSWORD_HASH="$(openssl passwd -6)" ROOT_PASSWORD_HASH="$(openssl passwd -6)" bash diy-linux.sh --build
   SHA-512 crypt and yescrypt (\$y\$) hashes are accepted. Hashes are saved
   in settings and /etc/shadow; do not publish them.
   Administration after login: sudo -i (regular user password).
@@ -1343,6 +1400,8 @@ HELP_EN
     printf 'Scenarijaus versija: %s\n' "$DIY_VERSION"
     cat <<'HELP'
 Vienas Bash scenarijus kuria x86_64, i686 arba ARM64 GNU/Linux iš šaltinių.
+Beta edukacinis projektas Linux entuziastams, norintiems mokytis kurti sistemas iš šaltinių; įkvėptas LFS ir Gentoo.
+Tai nepriklausomas eksperimentinis projektas, ne paruošta kasdienio naudojimo distribucija.
 Kalba: pagal nutylėjimą anglų; --LT įjungia lietuvių kalbą.
 Paleidus be argumentų: kurti naują / redaguoti esamą / tęsti nebaigtą kūrimą.
   bash diy-linux.sh --new    # naujos sistemos komponentų meniu
@@ -1523,11 +1582,11 @@ PKG_OPENSSH=yes įtraukia OpenSSH klientą ir serverį; sshd paleidžiamas su si
 PKG_PHP=yes taip pat įjungia Nginx; PHP vykdomas per PHP-FPM ir vietinį FastCGI lizdą.
 Neofetch ir Welcome naujuose kūrimuose visada įtraukiami.
 Pavyzdys: PKG_VIM=yes PKG_WGET=no bash diy-linux.sh --build
-USER_NAME pasirenka vartotoją; ROOT_PASSWORD_HASH nustato bendrą slaptažodį.
-Nepateikus ROOT_PASSWORD_HASH, numatytasis USER_PASSWORD_HASH paveldi root hash. Atskirą user slaptažodį galima aiškiai nurodyti su USER_PASSWORD_HASH.
+USER_NAME pasirenka vartotoją; USER_PASSWORD_HASH ir ROOT_PASSWORD_HASH turi būti atskiri.
+Abu slaptažodžius gali įvesti meniu arba pateikti atskirais hash parametrais.
 Sudo prašo vartotojo slaptažodžio; sudoers taisyklė: %sudo ALL=(ALL:ALL) ALL.
 Root --build slaptažodžio pavyzdys:
-  ROOT_PASSWORD_HASH="$(openssl passwd -6)" bash diy-linux.sh --build
+  ROOT_PASSWORD_HASH="$(openssl passwd -6)" USER_PASSWORD_HASH="$(openssl passwd -6)" bash diy-linux.sh --build
 Priimami SHA-512 crypt ir yescrypt (\$y\$) hash'ai. Hash pateks į /etc/shadow
 ir kūrimo sesijos nustatymų failą; jo nekelk į Git.
 
@@ -1598,13 +1657,13 @@ validate() {
     # PHP is served through FastCGI, so its menu toggle also selects Nginx.
     [[ "$PKG_PHP" != yes ]] || PKG_NGINX=yes
     VALIDATION_ERROR=''
-    case "$DESKTOP_CHOICE" in none|mate|lxde|fluxbox) ;; *) validation_error "$(tr_text 'Desktop: none, mate, lxde, or fluxbox' 'Darbalaukis: none, MATE, LXDE arba Fluxbox')"; return 1 ;; esac
+    case "$DESKTOP_CHOICE" in none|x11|mate|lxde|fluxbox|cinnamon) ;; *) validation_error "$(tr_text 'Desktop: none, x11, mate, lxde, fluxbox, or cinnamon' 'Darbalaukis: none, X11 terminalas, MATE, LXDE, Fluxbox arba Cinnamon')"; return 1 ;; esac
     if [[ "$PKG_GEANY" == yes ]]; then
         [[ "$DESKTOP_CHOICE" == mate && "$TARGET_ARCH:$TOOLS_CHOICE" == x86_64:gnu ]] || {
             validation_error "$(tr_text 'Geany currently requires the x86_64 GNU MATE desktop' 'Geany kol kas reikia x86_64 GNU MATE darbalaukio')"; return 1; }
     fi
     if [[ "$PKG_FIREFOX" == yes ]]; then
-        [[ ( "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox ) && "$TARGET_ARCH:$TOOLS_CHOICE" == x86_64:gnu ]] || {
+        [[ ( "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == cinnamon ) && "$TARGET_ARCH:$TOOLS_CHOICE" == x86_64:gnu ]] || {
             validation_error "$(tr_text 'Firefox currently requires an x86_64 GNU Xorg desktop' 'Firefox kol kas reikia x86_64 GNU Xorg darbalaukio')"; return 1; }
     fi
     if [[ "$PKG_PLUMA" == yes || "$PKG_ENGRAMPA" == yes || "$PKG_CAJA" == yes || "$PKG_EOM" == yes || "$PKG_MATE_CONTROL_CENTER" == yes || "$PKG_MATE_POWER_MANAGER" == yes ]]; then
@@ -1618,6 +1677,9 @@ validate() {
     if [[ "$DESKTOP_CHOICE" != none && "$TARGET_ARCH" != x86_64 ]]; then
         validation_error "$(tr_text 'Current graphical desktop profiles require TARGET_ARCH=x86_64.' 'Dabartiniams grafiniams profiliams reikia TARGET_ARCH=x86_64.')"; return 1
     fi
+    if [[ "$DESKTOP_CHOICE" == cinnamon && "$TOOLS_CHOICE" != gnu ]]; then
+        validation_error "$(tr_text 'Cinnamon currently requires GNU utilities and an x86_64 target.' 'Cinnamon kol kas reikia GNU įrankių ir x86_64 sistemos.')"; return 1
+    fi
     if [[ "$DESKTOP_CHOICE" != none && "$TOOLS_CHOICE" == busybox && "$INIT_CHOICE" != busybox ]]; then
         validation_error "$(tr_text 'Desktop profiles with BusyBox utilities currently require BusyBox init; choose GNU utilities for other init systems.' 'Darbalaukio profiliui su BusyBox įrankiais kol kas reikia BusyBox init; kitoms init sistemoms pasirink GNU įrankius.')"; return 1
     fi
@@ -1629,7 +1691,7 @@ validate() {
     case "$AUTOLOGIN" in yes|no) ;; *) validation_error "$(tr_text 'AUTOLOGIN must be yes or no' 'AUTOLOGIN turi būti yes arba no')"; return 1 ;; esac
     case "$DESKTOP_AUTOSTART" in yes|no) ;; *) validation_error "$(tr_text 'DESKTOP_AUTOSTART must be yes or no' 'DESKTOP_AUTOSTART turi būti yes arba no')"; return 1 ;; esac
     case "$KEEP_ROOTFS_TAR" in yes|no) ;; *) validation_error "$(tr_text 'KEEP_ROOTFS_TAR must be yes or no' 'KEEP_ROOTFS_TAR turi būti yes arba no')"; return 1 ;; esac
-    [[ "$DESKTOP_AUTOSTART" != yes || "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox ]] || {
+    [[ "$DESKTOP_AUTOSTART" != yes || "$DESKTOP_CHOICE" == x11 || "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == cinnamon ]] || {
         validation_error "$(tr_text 'DESKTOP_AUTOSTART requires an Xorg desktop profile' 'DESKTOP_AUTOSTART reikia Xorg darbalaukio profilio')"; return 1; }
     [[ "$AUTOLOGIN" != yes || "$TOOLS_CHOICE" == gnu ]] || {
         validation_error "$(tr_text 'AUTOLOGIN requires GNU utilities (util-linux agetty and the shadow login program)' 'AUTOLOGIN reikia GNU įrankių (util-linux agetty ir Shadow login programa)')"; return 1; }
@@ -1694,6 +1756,7 @@ Kompiliavimo užduotys:       $JOBS
 ISO pakavimo užduotys:       ${SQUASH_JOBS:-$JOBS}
 Kompiuterio vardas:          $SYSTEM_NAME
 OS pavadinimas:              $OS_NAME
+LinuxInstaller:              $([[ "$TARGET_ARCH" == x86_64 ]] && printf 'įtrauktas (x86_64)' || printf 'nepalaikomas šiai architektūrai')
 Vartotojas su sudo:          $USER_NAME
 Papildomos programos:       Nginx=$PKG_NGINX PHP-FPM=$PKG_PHP nano=$PKG_NANO wget=$PKG_WGET OpenSSH=$PKG_OPENSSH ping=$PKG_PING neofetch=$PKG_NEOFETCH vim=$PKG_VIM fdisk=$PKG_FDISK Geany=$PKG_GEANY Firefox=$PKG_FIREFOX Caja=$PKG_CAJA Pluma=$PKG_PLUMA Engrampa=$PKG_ENGRAMPA EOM=$PKG_EOM MCC=$PKG_MATE_CONTROL_CENTER Power-Manager=$PKG_MATE_POWER_MANAGER Marco=built-in
 Pasirinktų komponentų ISO prieaugis (apytiksliai): +$(selected_iso_delta)
@@ -1722,6 +1785,7 @@ Build jobs:                  $JOBS
 Image packaging jobs:        ${SQUASH_JOBS:-$JOBS}
 Hostname:                    $SYSTEM_NAME
 OS name:                     $OS_NAME
+LinuxInstaller:              $([[ "$TARGET_ARCH" == x86_64 ]] && printf 'included (x86_64)' || printf 'not supported for this architecture')
 User with sudo access:       $USER_NAME
 Extra programs:              Nginx=$PKG_NGINX PHP-FPM=$PKG_PHP nano=$PKG_NANO wget=$PKG_WGET OpenSSH=$PKG_OPENSSH ping=$PKG_PING neofetch=$PKG_NEOFETCH vim=$PKG_VIM fdisk=$PKG_FDISK Geany=$PKG_GEANY Firefox=$PKG_FIREFOX Caja=$PKG_CAJA Pluma=$PKG_PLUMA Engrampa=$PKG_ENGRAMPA EOM=$PKG_EOM MCC=$PKG_MATE_CONTROL_CENTER Power-Manager=$PKG_MATE_POWER_MANAGER Marco=built-in
 Estimated selected-component ISO increase: +$(selected_iso_delta)
@@ -1831,14 +1895,14 @@ PKG_PING ping / ping6 — tinklo patikra
 PKG_VIM vim — teksto redaktorius
 PKG_FDISK fdisk — disko skaidinių įrankis
 OPTIONS_LT
-        if [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox ]]; then
+        if [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == x11 ]]; then
             printf '%s\n' 'DESKTOP_AUTOSTART Automatiškai paleisti grafinę sesiją prisijungus vietinėje tty1 konsolėje'
         fi
         if [[ "$DESKTOP_CHOICE" == mate ]]; then
             printf '%s\n' 'PKG_GEANY Geany — Notepad++ alternatyva' 'PKG_FIREFOX Firefox — Mozilla naršyklė (x86_64)' 'PKG_PLUMA Pluma — MATE teksto redaktorius' 'PKG_CAJA Caja — failų tvarkyklė' 'PKG_ENGRAMPA Engrampa — archyvų tvarkyklė' 'PKG_EOM Eye of MATE — paveikslėlių peržiūra' 'PKG_MATE_CONTROL_CENTER MATE Control Center — nustatymai (Polkit / UDisks2; systemd arba elogind)' 'PKG_MATE_POWER_MANAGER MATE Power Manager — energijos valdymas (Polkit / UPower; systemd arba elogind)'
         elif [[ "$DESKTOP_CHOICE" == fluxbox ]]; then
             printf '%s\n' 'PKG_FIREFOX Firefox — Mozilla naršyklė smėlio dėžėje (x86_64)'
-        elif [[ "$DESKTOP_CHOICE" == lxde ]]; then
+        elif [[ "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == cinnamon || "$DESKTOP_CHOICE" == mate ]]; then
             printf '%s\n' 'PKG_FIREFOX Firefox — Mozilla naršyklė smėlio dėžėje (x86_64)'
         fi
     else
@@ -1856,14 +1920,14 @@ PKG_PING ping / ping6 - network checks
 PKG_VIM vim - text editor
 PKG_FDISK fdisk - disk partition tool
 OPTIONS_EN
-        if [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox ]]; then
+        if [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == x11 ]]; then
             printf '%s\n' 'DESKTOP_AUTOSTART Start the graphical session automatically after local tty1 login'
         fi
         if [[ "$DESKTOP_CHOICE" == mate ]]; then
             printf '%s\n' 'PKG_GEANY Geany - Notepad++ alternative' 'PKG_FIREFOX Firefox - Mozilla browser (x86_64)' 'PKG_PLUMA Pluma - MATE text editor' 'PKG_CAJA Caja - file manager' 'PKG_ENGRAMPA Engrampa - archive manager' 'PKG_EOM Eye of MATE - image viewer' 'PKG_MATE_CONTROL_CENTER MATE Control Center - settings (Polkit / UDisks2; systemd or elogind)' 'PKG_MATE_POWER_MANAGER MATE Power Manager - power management (Polkit / UPower; systemd or elogind)'
         elif [[ "$DESKTOP_CHOICE" == fluxbox ]]; then
             printf '%s\n' 'PKG_FIREFOX Firefox - Mozilla browser in a filesystem sandbox (x86_64)'
-        elif [[ "$DESKTOP_CHOICE" == lxde ]]; then
+        elif [[ "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == cinnamon || "$DESKTOP_CHOICE" == mate ]]; then
             printf '%s\n' 'PKG_FIREFOX Firefox - Mozilla browser in a filesystem sandbox (x86_64)'
         fi
     fi
@@ -2299,6 +2363,17 @@ Prisijungimo pasisveikinime rodomas dabartinis IPv4 adresas ir ssh komanda, kai 
 # Informaciniai darbalaukio profiliai ir build instrukcijos.
 desktop_description() {
     case "$1" in
+        cinnamon) printf '%s\n' "$(tr_text 'Cinnamon 6.6 + Xorg
+
++ Cinnamon session with Muffin, Settings, Nemo, CJS, Cinnamon menus and the menu editor; Cinnamon Screensaver is omitted.
+- The source build is experimental and requires x86_64, GNU tools and Rust. Start with startcinnamon on a local console or set DESKTOP_AUTOSTART=yes.
+
+Upstream: https://github.com/linuxmint/Cinnamon' 'Cinnamon 6.6 + Xorg
+
++ Cinnamon sesija su Muffin, nustatymais, Nemo, CJS, Cinnamon meniu bibliotekomis ir meniu redaktoriumi; Cinnamon Screensaver neįtraukiama.
+- Šaltinių kompiliavimas eksperimentinis; reikia x86_64, GNU įrankių ir Rust. Paleisk startcinnamon vietinėje konsolėje arba nustatyk DESKTOP_AUTOSTART=yes.
+
+Projektas: https://github.com/linuxmint/Cinnamon')" ;;
         lxde) printf '%s\n' "$(tr_text 'LXDE + Xorg
 
 + Lightweight GTK desktop with LXPanel, LXSession and PCManFM. Fluxbox is included as its window manager; the standalone Fluxbox desktop remains a separate choice.
@@ -2455,7 +2530,8 @@ edit_system_menu() {
     fi
     select_system '' "$(tr_text 'Which existing system should be edited?' 'Kurią esamą sistemą redaguoti?')" || return 0
     load_system "$SELECTED_SYSTEM"
-    local chosen=$BASE username
+    local chosen=$BASE username image
+    local -a image_entries=() qemu_command=()
     while :; do
         if ! tui --title "$(tr_text "Edit: $SYSTEM_NAME ($TARGET_ARCH)" "Redaguoti: $SYSTEM_NAME ($TARGET_ARCH)")" --cancel-label "$(tr_text 'Back' 'Atgal')" --menu \
             "$(tr_text "Rootfs: $ROOT\nChanges in chroot persist; create ISO / IMG separately afterwards." "Rootfs: $ROOT\nPakeitimai chroot išlieka; po jų atskirai sukurk ISO / IMG.")" 20 80 8 \
@@ -2463,7 +2539,8 @@ edit_system_menu() {
             user "$(tr_text 'Add a user with sudo access' 'Pridėti vartotoją su sudo teisėmis')" \
             iso "$(tr_text 'Create ISO from the modified system' 'Sukurti ISO iš pakeistos sistemos')" img "$(tr_text 'Create IMG from the modified system' 'Sukurti IMG iš pakeistos sistemos')" \
             repack "$(tr_text 'Refresh all normal images for this profile' 'Atnaujinti visus šio profilio atvaizdus')" \
-            info "$(tr_text 'View this system configuration' 'Peržiūrėti šios sistemos nustatymus')"; then return 0; fi
+            info "$(tr_text 'View this system configuration' 'Peržiūrėti šios sistemos nustatymus')" \
+            qemu "$(tr_text 'Open compiled ISO / IMG in QEMU' 'Atidaryti sukompiliuotą ISO / IMG per QEMU')"; then return 0; fi
         case "$TUI_VALUE" in
             enter) (enter_system "$chosen") ;;
             user)
@@ -2477,6 +2554,57 @@ edit_system_menu() {
                     tui --msgbox "$(tr_text 'This profile has no bootloader. Refresh the archives only.' 'Šis profilis neturi paleidyklės. Galima tik atnaujinti archyvus.')" 10 76 || :
                 else (repack_system "$chosen" "$TUI_VALUE"); fi ;;
             repack) (repack_system "$chosen" auto) ;;
+            qemu)
+                image_entries=()
+                for image in "$IMAGES"/*.iso "$IMAGES"/*.img; do
+                    [[ -s "$image" ]] || continue
+                    image_entries+=("$image" "${image##*/}")
+                done
+                if (( ${#image_entries[@]} == 0 )); then
+                    tui --title "QEMU" --msgbox "$(tr_text 'No compiled ISO or IMG files were found.' 'Nerasta sukompiliuotų ISO arba IMG failų.')" 9 68 || :
+                    continue
+                fi
+                if ! command -v "qemu-system-${TARGET_ARCH}" >/dev/null 2>&1; then
+                    tui --title "QEMU" --msgbox "$(tr_text "Missing qemu-system-${TARGET_ARCH}. Install QEMU and try again." "Nerastas qemu-system-${TARGET_ARCH}. Įdiek QEMU ir bandyk dar kartą.")" 9 72 || :
+                    continue
+                fi
+                if ! tui --title "QEMU" --menu "$(tr_text 'Select a compiled image to boot.' 'Pasirink sukompiliuotą atvaizdą paleisti.')" 16 76 8 "${image_entries[@]}"; then
+                    continue
+                fi
+                image=$TUI_VALUE
+                case "$TARGET_ARCH" in
+                    x86_64) qemu_command=(qemu-system-x86_64 -machine accel=kvm:tcg) ;;
+                    i686) qemu_command=(qemu-system-i386 -machine accel=kvm:tcg) ;;
+                    aarch64) qemu_command=(qemu-system-aarch64 -machine virt,accel=kvm:tcg -cpu cortex-a72) ;;
+                esac
+                qemu_command+=(-m 6144 -smp "${QEMU_CPUS:-2}" -vga std -usb -device usb-tablet -nic user)
+                local is_iso=no use_uefi=no firmware=''
+                [[ "$image" != *.iso ]] || is_iso=yes
+                if [[ "$is_iso" != yes ]] && file -b "$image" | grep -q 'ISO 9660'; then is_iso=yes; fi
+                if [[ "$is_iso" == yes ]]; then
+                    qemu_command+=(-boot d -cdrom "$image")
+                    if command -v xorriso >/dev/null 2>&1 && \
+                        xorriso -indev "$image" -report_el_torito plain 2>/dev/null | grep -q 'EFI'; then
+                        use_uefi=yes
+                    fi
+                else
+                    qemu_command+=(-drive "format=raw,file=$image")
+                    case "$BOOT_CHOICE" in uefi|refind|efistub|systemd-boot) use_uefi=yes ;; esac
+                fi
+                if [[ "$use_uefi" == yes ]]; then
+                        case "$TARGET_ARCH" in
+                            x86_64) for firmware in /usr/share/ovmf/OVMF.fd /usr/share/qemu/OVMF.fd /usr/share/OVMF/OVMF.fd /usr/share/edk2/ovmf/OVMF.fd; do [[ -r "$firmware" ]] && break; done ;;
+                            i686) firmware=/usr/share/OVMF/OVMF32.fd ;;
+                            aarch64) firmware=/usr/share/qemu-efi-aarch64/QEMU_EFI.fd ;;
+                        esac
+                        if [[ -r "$firmware" ]]; then
+                            qemu_command+=(-bios "$firmware")
+                        else
+                            tui --title "QEMU" --msgbox "$(tr_text 'UEFI firmware is missing on the host. Install OVMF / AAVMF and try again.' 'Pagrindinėje sistemoje trūksta UEFI programinės aparatinės įrangos. Įdiek OVMF / AAVMF ir bandyk dar kartą.')" 10 76 || :
+                            continue
+                        fi
+                fi
+                (cd /tmp && "${qemu_command[@]}") || tui --title "QEMU" --msgbox "$(tr_text 'QEMU could not start this image. Check the image format and QEMU output.' 'QEMU nepavyko paleisti šio atvaizdo. Patikrink failo formatą ir QEMU išvestį.')" 10 76 || : ;;
             info) tui --title "$(tr_text 'Saved system configuration' 'Išsaugoti sistemos nustatymai')" --textbox "$chosen/system.settings" 21 78 || : ;;
         esac
     done
@@ -2731,14 +2859,17 @@ menu() {
             desktop)
                 platform_menu desktop DESKTOP_CHOICE "$(tr_text 'Desktop environment' 'Grafinė aplinka')" \
                     none "$(tr_text 'Console only' 'Tik terminalas')" \
+                    x11 "$(tr_text 'X11 + XTerm (terminal only; no desktop environment)' 'X11 + XTerm (tik terminalas; be darbastalio aplinkos)')" \
                     mate 'MATE 1.28 + Xorg (x86_64; GNU or BusyBox utilities)' \
                     lxde 'LXDE + Xorg (x86_64; GTK desktop)' \
-                    fluxbox 'Fluxbox 1.3.7 + Xorg (x86_64; standalone desktop session)'
+                    fluxbox 'Fluxbox 1.3.7 + Xorg (x86_64; standalone desktop session)' \
+                    cinnamon 'Cinnamon 6.6 + Xorg (x86_64; GNU tools; no screensaver)'
                 case "$DESKTOP_CHOICE" in
                     mate) PKG_FIREFOX=yes; PKG_CAJA=yes ;;
                     lxde) PKG_GEANY=no; PKG_FIREFOX=no; PKG_PLUMA=no; PKG_CAJA=no; PKG_ENGRAMPA=no; PKG_EOM=no ;;
                     fluxbox) PKG_FIREFOX=no; PKG_PLUMA=no; PKG_CAJA=no; PKG_ENGRAMPA=no; PKG_EOM=no ;;
                     none) PKG_GEANY=no; PKG_FIREFOX=no; PKG_PLUMA=no; PKG_ENGRAMPA=no ;;
+                    x11) PKG_GEANY=no; PKG_FIREFOX=no; PKG_PLUMA=no; PKG_CAJA=no; PKG_ENGRAMPA=no; PKG_EOM=no; PKG_MATE_CONTROL_CENTER=no; PKG_MATE_POWER_MANAGER=no ;;
                 esac
                 if [[ -z "$DESKTOP_AUTOSTART_WAS_SET" ]]; then
                     DESKTOP_AUTOSTART=no
@@ -2761,16 +2892,25 @@ menu() {
     done
     # Sudo ir priklausomybių diegimas atliekami įprastame terminale.
     check_host
-    if tui --title "$(tr_text 'System and user password' 'Sistemos ir vartotojo slaptažodis')" --insecure --passwordbox \
-        "$(tr_text 'This password will be used for both root and the default user. Enter keeps the current passwords; Esc cancels the build.' 'Šis slaptažodis bus naudojamas root ir numatytajam vartotojui. Enter palieka esamus slaptažodžius; Esc atšaukia kūrimą.')" 11 76; then
+    if tui --title "$(tr_text 'User password' 'Vartotojo slaptažodis')" --insecure --passwordbox \
+        "$(tr_text 'Set the default user password. Empty keeps the current password; Esc cancels the build.' 'Nustatyk numatytojo vartotojo slaptažodį. Tuščias laukas palieka esamą; Esc atšaukia kūrimą.')" 11 76; then
         password=$TUI_VALUE
     else exit 0; fi
     if [[ -n "$password" ]]; then
         tui --title "$(tr_text 'Confirm password' 'Patvirtink slaptažodį')" --insecure --passwordbox "$(tr_text 'Repeat the password once.' 'Pakartok slaptažodį vieną kartą.')" 10 76 || exit 0
         confirmation=$TUI_VALUE
         [[ "$password" == "$confirmation" ]] || die "$(tr_text 'Passwords do not match' 'Slaptažodžiai nesutampa')"
+        USER_PASSWORD_HASH=$(printf '%s\n' "$password" | openssl passwd -6 -stdin)
+    fi
+    if tui --title "$(tr_text 'Root password' 'Root slaptažodis')" --insecure --passwordbox \
+        "$(tr_text 'Set the root password separately. Leave empty to keep the current root password.' 'Nustatyk atskirą root slaptažodį. Tuščias laukas palieka esamą root slaptažodį.')" 11 76; then
+        password=$TUI_VALUE
+    else exit 0; fi
+    if [[ -n "$password" ]]; then
+        tui --title "$(tr_text 'Confirm root password' 'Patvirtink root slaptažodį')" --insecure --passwordbox "$(tr_text 'Repeat the root password once.' 'Pakartok root slaptažodį vieną kartą.')" 10 76 || exit 0
+        confirmation=$TUI_VALUE
+        [[ "$password" == "$confirmation" ]] || die "$(tr_text 'Passwords do not match' 'Slaptažodžiai nesutampa')"
         ROOT_PASSWORD_HASH=$(printf '%s\n' "$password" | openssl passwd -6 -stdin)
-        USER_PASSWORD_HASH=$ROOT_PASSWORD_HASH
     fi
     unset password confirmation TUI_VALUE
 }
@@ -2799,7 +2939,7 @@ host_needs_cmake() {
 
 collect_host_dependencies() {
     HOST_MISSING=(); HOST_PACKAGES=()
-    local tool deb arch fedora package header
+    local tool deb arch fedora package header llvm_major llvm_candidate clang_libdir
     local -A seen=()
     while read -r tool deb arch fedora; do
         [[ -n "$tool" ]] || continue
@@ -2870,24 +3010,24 @@ TOOLS
         # Bitmap X11 fonts are converted during the font package build and
         # indexed in the target rootfs after install; these are host tools.
         [[ "$DESKTOP_CHOICE" == none ]] || printf 'bdftopcf bdftopcf bdftopcf xorg-x11-font-utils\nmkfontdir xfonts-utils xorg-mkfontscale xorg-x11-font-utils\n'
-        [[ "$DESKTOP_CHOICE" != mate && "$DESKTOP_CHOICE" != lxde ]] || printf 'msgfmt gettext gettext gettext\nintltool-update intltool intltool intltool\nintltool-merge intltool intltool intltool\nintltool-extract intltool intltool intltool\nitstool itstool itstool itstool\n'
+        [[ "$DESKTOP_CHOICE" != mate && "$DESKTOP_CHOICE" != lxde && "$DESKTOP_CHOICE" != cinnamon ]] || printf 'msgfmt gettext gettext gettext\nautopoint autopoint gettext gettext-devel\ngtkdocize gtk-doc-tools gtk-doc gtk-doc\nintltool-update intltool intltool intltool\nintltool-merge intltool intltool intltool\nintltool-extract intltool intltool intltool\nitstool itstool itstool itstool\n'
         [[ "$DESKTOP_CHOICE" != mate ]] || printf 'gtk-encode-symbolic-svg libgtk-3-bin gtk3 gtk3\n'
         [[ "$DESKTOP_CHOICE" != mate ]] ||
             printf 'cargo-cbuild cargo-c cargo-c cargo-c\n'
-        if [[ "$DESKTOP_CHOICE" == mate && ${PKG_EOM:-no} == yes ]]; then
+        if [[ "$DESKTOP_CHOICE" == mate && ${PKG_EOM:-no} == yes || "$DESKTOP_CHOICE" == cinnamon ]]; then
             # GIR scanners execute on the build host during cross compilation.
             printf 'g-ir-scanner gobject-introspection gobject-introspection gobject-introspection\ng-ir-compiler gobject-introspection gobject-introspection gobject-introspection\n'
         fi
-        [[ "$DESKTOP_CHOICE" != mate ]] || printf 'rustc rustc rust rust\ncargo cargo cargo cargo\n'
+        [[ "$DESKTOP_CHOICE" != cinnamon ]] || printf 'asn1Parser libtasn1-bin libtasn1 libtasn1-tools\n'
+        [[ "$DESKTOP_CHOICE" != mate && "$DESKTOP_CHOICE" != cinnamon ]] || printf 'rustc rustc rust rust\ncargo cargo cargo cargo\n'
         [[ "$DESKTOP_CHOICE" != lxde ]] || printf 'valac valac vala vala\n'
         if [[ -n "$EMULATOR" ]]; then
             printf '%s qemu-user qemu-user-static qemu-user\ntarget-binfmt qemu-user-binfmt qemu-user-static-binfmt qemu-user-binfmt\n' "$EMULATOR"
         fi
         [[ "$BOOT_CHOICE" == none || "$BOOT_CHOICE" == lilo ]] || printf 'xorriso xorriso libisoburn xorriso\nmformat mtools mtools mtools\n'
-        if [[ "$BOOT_CHOICE" == bios && "$TARGET_ARCH" == x86_64 ]]; then
-            printf 'grub-mkrescue grub-common grub grub2-tools-extra\n'
-            [[ -d /usr/lib/grub/i386-pc ]] || printf 'grub-pc-modules grub-pc-bin grub grub2-pc-modules\n'
-        fi
+        # BIOS/UEFI GRUB media use the profile-local GRUB build and modules.
+        # The host grub-mkrescue is only an optional fast path; do not require
+        # grub-pc-modules from the host package manager.
         if [[ "$BOOT_CHOICE" == lilo ]]; then
             printf 'losetup util-linux util-linux util-linux\nsfdisk util-linux util-linux util-linux\nmkfs.ext2 e2fsprogs e2fsprogs e2fsprogs\nmount util-linux util-linux util-linux\numount util-linux util-linux util-linux\nmountpoint util-linux util-linux util-linux\n'
         fi
@@ -2935,9 +3075,15 @@ HEADERS
             HOST_PACKAGES+=("$package"); seen[$package]=1
         fi
     fi
-    if [[ "$INIT_CHOICE" == systemd ]] && ! python3 -c 'import jinja2' >/dev/null 2>&1; then
+    if [[ "$INIT_CHOICE" == systemd || "$DESKTOP_CHOICE" == mate ]] && ! python3 -c 'import jinja2' >/dev/null 2>&1; then
         HOST_MISSING+=('Python jinja2')
         case "$HOST_PM" in apt-get) package=python3-jinja2 ;; pacman) package=python-jinja ;; dnf) package=python3-jinja2 ;; *) package='' ;; esac
+        [[ -z "$package" || -v seen[$package] ]] || HOST_PACKAGES+=("$package")
+    fi
+    if [[ "$DESKTOP_CHOICE" == mate && "${PKG_EOM:-no}" == yes ]] &&
+        ! python3 -c 'import pathlib, sysconfig; raise SystemExit(not (pathlib.Path(sysconfig.get_path("include")) / "Python.h").is_file())'; then
+        HOST_MISSING+=('Python.h')
+        case "$HOST_PM" in apt-get) package=python3-dev ;; pacman) package=python ;; dnf) package=python3-devel ;; *) package='' ;; esac
         [[ -z "$package" || -v seen[$package] ]] || HOST_PACKAGES+=("$package")
     fi
     if [[ "$DESKTOP_CHOICE" != none ]] && ! python3 -c 'import mako' >/dev/null 2>&1; then
@@ -2949,6 +3095,71 @@ HEADERS
         HOST_MISSING+=('Python PyYAML')
         case "$HOST_PM" in apt-get) package=python3-yaml ;; pacman) package=python-yaml ;; dnf) package=python3-pyyaml ;; *) package='' ;; esac
         [[ -z "$package" || -v seen[$package] ]] || HOST_PACKAGES+=("$package")
+    fi
+    if [[ "$DESKTOP_CHOICE" != none ]]; then
+        # Mesa's Intel CLC/precompile tools are native build-host programs.
+        # Resolve LLVM-SPIRV's package against the LLVM major selected by the
+        # host distribution, since the translator ABI is LLVM-version-specific.
+        if ! command -v llvm-config >/dev/null 2>&1; then
+            HOST_MISSING+=('llvm-config (LLVM development tools)')
+            case "$HOST_PM" in apt-get) package=llvm-dev ;; pacman) package=llvm ;; dnf) package=llvm-devel ;; *) package='' ;; esac
+            [[ -z "$package" || -v seen[$package] ]] || { HOST_PACKAGES+=("$package"); seen[$package]=1; }
+        fi
+        if ! command -v clang >/dev/null 2>&1; then
+            HOST_MISSING+=(clang)
+            case "$HOST_PM" in apt-get|pacman|dnf) package=clang ;; *) package='' ;; esac
+            [[ -z "$package" || -v seen[$package] ]] || { HOST_PACKAGES+=("$package"); seen[$package]=1; }
+        fi
+        if ! env -u PKG_CONFIG_SYSROOT_DIR -u PKG_CONFIG_LIBDIR -u PKG_CONFIG_PATH pkg-config --exists SPIRV-Tools; then
+            HOST_MISSING+=('SPIRV-Tools development files')
+            case "$HOST_PM" in apt-get|pacman) package=spirv-tools ;; dnf) package=spirv-tools-devel ;; *) package='' ;; esac
+            [[ -z "$package" || -v seen[$package] ]] || { HOST_PACKAGES+=("$package"); seen[$package]=1; }
+            case "$HOST_PM" in apt-get|pacman) package=spirv-headers ;; dnf) package=spirv-headers-devel ;; *) package='' ;; esac
+            [[ -z "$package" || -v seen[$package] ]] || { HOST_PACKAGES+=("$package"); seen[$package]=1; }
+        fi
+        if ! env -u PKG_CONFIG_SYSROOT_DIR -u PKG_CONFIG_LIBDIR -u PKG_CONFIG_PATH pkg-config --exists LLVMSPIRVLib; then
+            HOST_MISSING+=('LLVM-SPIRV translator development files')
+            llvm_major=''
+            if command -v llvm-config >/dev/null 2>&1; then
+                llvm_major=$(llvm-config --version 2>/dev/null | sed 's/[^0-9].*//')
+            elif [[ "$HOST_PM" == apt-get ]]; then
+                llvm_candidate=$(apt-cache policy llvm-dev 2>/dev/null | sed -n 's/^[[:space:]]*Candidate: //p' | head -n1)
+                llvm_major=$(printf '%s\n' "$llvm_candidate" | sed -n -e 's/^[0-9]*:\([0-9][0-9]*\)\..*/\1/p' -e 's/^\([0-9][0-9]*\)\..*/\1/p' | head -n1)
+            fi
+            case "$HOST_PM" in
+                apt-get) [[ -z "$llvm_major" ]] || package="libllvmspirvlib-${llvm_major}-dev" ;;
+                pacman) package=spirv-llvm-translator ;;
+                dnf) package=spirv-llvm-translator-devel ;;
+                *) package='' ;;
+            esac
+            if [[ -n "$package" && ! -v seen[$package] ]]; then
+                HOST_PACKAGES+=("$package"); seen[$package]=1
+            fi
+        fi
+        # Debian splits Clang's libraries and headers from the driver package.
+        if command -v llvm-config >/dev/null 2>&1; then
+            clang_libdir=$(llvm-config --libdir 2>/dev/null || true)
+        else
+            clang_libdir=''
+        fi
+        if [[ -z "$clang_libdir" ]] || ! compgen -G "$clang_libdir/libclang-cpp.so*" >/dev/null; then
+            HOST_MISSING+=('Clang development libraries')
+            case "$HOST_PM" in apt-get) package=libclang-dev ;; pacman) package=clang ;; dnf) package=clang-devel ;; *) package='' ;; esac
+            [[ -z "$package" || -v seen[$package] ]] || { HOST_PACKAGES+=("$package"); seen[$package]=1; }
+        fi
+        while read -r module deb arch fedora; do
+            [[ -n "$module" ]] || continue
+            if ! env -u PKG_CONFIG_SYSROOT_DIR -u PKG_CONFIG_LIBDIR -u PKG_CONFIG_PATH pkg-config --exists "$module"; then
+                HOST_MISSING+=("$module development files")
+                case "$HOST_PM" in apt-get) package=$deb ;; pacman) package=$arch ;; dnf) package=$fedora ;; *) package='' ;; esac
+                [[ -z "$package" || -v seen[$package] ]] || { HOST_PACKAGES+=("$package"); seen[$package]=1; }
+            fi
+        done <<'MESA_HOST_LIBS'
+libdrm libdrm-dev libdrm libdrm-devel
+libelf libelf-dev libelf elfutils-libelf-devel
+pciaccess libpciaccess-dev libpciaccess libpciaccess-devel
+expat libexpat1-dev expat expat-devel
+MESA_HOST_LIBS
     fi
 }
 
@@ -2985,6 +3196,14 @@ install_host_dependencies() {
 check_host() {
     [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || die "$(tr_text 'Requires a Linux x86_64 host' 'Palaikomas Linux x86_64 šeimininkas')"
     [[ $EUID -ne 0 ]] || die "$(tr_text 'Build as a regular user, not root; the script uses sudo for installation when needed' 'Kompiliuok paprasto naudotojo teisėmis, ne root; diegimui scenarijus pats naudos sudo')"
+    # Regular-user shells may omit the directories where host admin tools live.
+    local admin_dir
+    for admin_dir in /usr/sbin /sbin; do
+        case ":$PATH:" in
+            *":$admin_dir:"*) ;;
+            *) export PATH="${PATH:+$PATH:}$admin_dir" ;;
+        esac
+    done
     HOST_PM=''
     host_package_manager || HOST_PM=''
     collect_host_dependencies
@@ -2997,18 +3216,18 @@ check_host() {
         collect_host_dependencies
         (( ${#HOST_MISSING[@]} == 0 )) || die "$(tr_text "Still missing after installation: ${HOST_MISSING[*]}" "Po diegimo vis dar trūksta: ${HOST_MISSING[*]}")"
     fi
-    if [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox ]]; then
+    if [[ "$DESKTOP_CHOICE" == x11 || "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == cinnamon ]]; then
         local meson_major meson_minor meson_version
         meson_version=$(meson --version)
         IFS=. read -r meson_major meson_minor _ <<< "$meson_version"
         [[ "$meson_major" =~ ^[0-9]+$ && "$meson_minor" =~ ^[0-9]+$ ]] || die "$(tr_text 'Failed to determine Meson version' 'Nepavyko nustatyti Meson versijos')"
         (( meson_major > 1 || (meson_major == 1 && meson_minor >= 4) )) || die "$(tr_text "Desktop libraries require Meson >= 1.4; found $meson_version. Update host Meson" "Darbalaukio bibliotekoms reikia Meson >= 1.4; rastas $meson_version. Atnaujink šeimininko Meson")"
     fi
-    if [[ "$DESKTOP_CHOICE" == mate ]]; then
+    if [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == cinnamon ]]; then
         local rust_libdir
         rust_libdir=$(rustc --print target-libdir --target "$RUST_TARGET")
         compgen -G "$rust_libdir/libstd-*.rlib" >/dev/null ||
-            die "$(tr_text "MATE's librsvg requires Rust std for $RUST_TARGET; install it with rustup target add $RUST_TARGET" "MATE librsvg reikia Rust std $RUST_TARGET; įdiek su rustup target add $RUST_TARGET")"
+            die "$(tr_text "The selected desktop build requires Rust std for $RUST_TARGET; install it with rustup target add $RUST_TARGET" "Pasirinktam darbalaukiui reikia Rust std $RUST_TARGET; įdiek su rustup target add $RUST_TARGET")"
     fi
     if [[ "$SHELL_CHOICE" == fish ]]; then
         local rust_version rust_major rust_minor rust_libdir
@@ -3047,7 +3266,7 @@ prepare_grub_font() {
 }
 
 grub_tools() {
-    local source target platform target_cc
+    local source target platform target_cc secondary_target secondary_platform secondary_build secondary_target_cc
     case "$BOOT_CHOICE" in
         bios) target=i386; platform=pc ;;
         uefi) target=$EFI_CPU; platform=efi ;;
@@ -3116,6 +3335,42 @@ grub_tools() {
     fi
     make -C "$BUILD/grub-host" -j"$JOBS"
     make -C "$BUILD/grub-host" install
+    # x86 PCs may boot either legacy BIOS or UEFI. Build the alternate GRUB
+    # platform into the same private prefix so one ISO can carry both entries.
+    if [[ "$TARGET_ARCH" == x86_64 ]]; then
+        case "$BOOT_CHOICE" in
+            bios) secondary_target=x86_64; secondary_platform=efi ;;
+            uefi) secondary_target=i386; secondary_platform=pc ;;
+        esac
+        if [[ "$secondary_platform" == efi ]]; then
+            secondary_target_cc="$TOOLS/bin/x86_64-diy-linux-gnu-gcc"
+            [[ -x "$secondary_target_cc" ]] || die "Missing x86_64 GRUB secondary target compiler: $secondary_target_cc"
+        else
+            secondary_target_cc="$HOST_CC"
+        fi
+        secondary_build="$BUILD/grub-host-$secondary_platform"
+        if [[ ! -f "$secondary_build/Makefile" ]] ||
+           ! grep -Fq "target = $secondary_target-$secondary_platform-" "$secondary_build/Makefile"; then
+            rm -rf -- "$secondary_build"
+            mkdir -p "$secondary_build"
+            (
+                cd "$secondary_build"
+                CC="$HOST_CC" CXX="$HOST_CXX" BUILD_CC="$HOST_CC" \
+                    TARGET_CC="$secondary_target_cc" TARGET_CCAS="$secondary_target_cc" \
+                    TARGET_OBJCOPY="$TOOLS/bin/$TARGET-objcopy" \
+                    TARGET_STRIP="$TOOLS/bin/$TARGET-strip" \
+                    TARGET_NM="$TOOLS/bin/$TARGET-nm" \
+                    TARGET_RANLIB="$TOOLS/bin/$TARGET-ranlib" PKG_CONFIG_PATH= \
+                    ax_cv_check_ldflags___Wl___image_base_0x400000=no \
+                    "$source/configure" --prefix="$BASE/grub-tools" \
+                    --with-platform="$secondary_platform" --target="$secondary_target" \
+                    --disable-werror --disable-grub-mkfont --disable-efiemu \
+                    --disable-device-mapper --disable-libzfs "target_alias=$secondary_target"
+            )
+        fi
+        make -C "$secondary_build" -j"$JOBS"
+        make -C "$secondary_build" install
+    fi
     prepare_grub_font
 }
 
@@ -3244,6 +3499,7 @@ stage_label() {
         02a-login-su*) label="$(tr_text 'Login and account tools' 'Login ir paskyrų įrankiai')" ;;
         02b-sudo) label='Sudo' ;;
         03-system-bus) label="$(tr_text 'System D-Bus runtime' 'Sistemos D-Bus aplinka')" ;;
+        02e-linux-installer-v1) label="$(tr_text 'LinuxInstaller (C++ terminal installer)' 'LinuxInstaller (C++ terminalinis diegiklis)')" ;;
         03a-package-manager) label="$(tr_text 'Package manager' 'Paketų tvarkyklė')" ;;
         web-stack-v1) label="$(tr_text 'Nginx and PHP-FPM web stack' 'Nginx ir PHP-FPM žiniatinklio serveris')" ;;
         04-native-gcc) label="$(tr_text 'GCC in the final system' 'GCC galutinėje sistemoje')" ;;
@@ -3268,9 +3524,17 @@ stage_cache_context() {
         02-userland)
             printf 'shell=%s\ntools=%s\nfdisk=%s\nping=%s\n' "$SHELL_CHOICE" "$TOOLS_CHOICE" "$PKG_FDISK" "$PKG_PING"
             if needs_busybox; then printf 'busybox-init=%s\n' "$INIT_CHOICE"; fi ;;
+        02e-linux-installer-v1)
+            local installer_source_dir
+            installer_source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/linux-installer" && pwd -P)
+            [[ -s "$installer_source_dir/main.cpp" && -s "$installer_source_dir/scripts/install-system.sh" && \
+               -s "$installer_source_dir/scripts/system-config.sh" ]] ||
+                die "LinuxInstaller sources are missing or incomplete: $installer_source_dir"
+            printf 'installer-source=%s\n' "$(find "$installer_source_dir/main.cpp" "$installer_source_dir/scripts" -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)"
+            ;;
         02d-extras-*) printf 'nano=%s\nneofetch=%s\nvim=%s\nfdisk=%s\n' "$PKG_NANO" "$PKG_NEOFETCH" "$PKG_VIM" "$PKG_FDISK" ;;
         02c-network-tools-*) printf 'ping=%s\ntools=%s\n' "$PKG_PING" "$TOOLS_CHOICE" ;;
-        02a-login-su*) printf 'tools=%s\ncontrol-center=%s\npower-manager=%s\n' "$TOOLS_CHOICE" "$PKG_MATE_CONTROL_CENTER" "$PKG_MATE_POWER_MANAGER" ;;
+        02a-login-su*) printf 'tools=%s\ndesktop=%s\ncontrol-center=%s\npower-manager=%s\n' "$TOOLS_CHOICE" "$DESKTOP_CHOICE" "$PKG_MATE_CONTROL_CENTER" "$PKG_MATE_POWER_MANAGER" ;;
         02b-sudo) printf 'sudo=enabled\n' ;;
         03-init*)
             printf 'init=%s\nnetwork=%s\ndesktop=%s\ntools=%s\n' "$INIT_CHOICE" "$NETWORK" "$DESKTOP_CHOICE" "$TOOLS_CHOICE"
@@ -3324,7 +3588,7 @@ stage_cache_packages() {
         02-userland)
             # The kernel, init, desktop, and package-manager source versions
             # cannot invalidate the shell/utilities binaries.
-            printf '%s\n' libxcrypt ncurses kmod kbd
+            printf '%s\n' libxcrypt ncurses dialog kmod kbd
             if needs_busybox; then printf '%s\n' busybox; fi
             if [[ "$TOOLS_CHOICE" == gnu ]]; then
                 printf '%s\n' coreutils grep sed findutils gawk tar gzip procps util-linux inetutils iproute2
@@ -3337,6 +3601,7 @@ stage_cache_packages() {
                 busybox) printf '%s\n' bash ;;
             esac
             ;;
+        02e-linux-installer-v1) printf '%s\n' ncurses ;;
         02d-extras-*)
             [[ "$PKG_NANO" != yes ]] || printf '%s\n' nano
             [[ "$PKG_NEOFETCH" != yes ]] || printf '%s\n' neofetch
@@ -3345,7 +3610,7 @@ stage_cache_packages() {
         02c-network-tools-*) [[ "$PKG_PING" != yes ]] || printf '%s\n' inetutils ;;
         02a-login-su*)
             [[ "$TOOLS_CHOICE" != gnu ]] || printf '%s\n' shadow
-            [[ "$PKG_MATE_CONTROL_CENTER" != yes && "$PKG_MATE_POWER_MANAGER" != yes ]] || printf '%s\n' linux-pam
+            if desktop_needs_logind; then printf '%s\n' linux-pam; fi
             ;;
         02b-sudo) printf '%s\n' sudo ;;
         03-init*)
@@ -3399,6 +3664,7 @@ stage_cache_packages() {
                 mate) mate_packages ;;
                 lxde) lxde_packages ;;
                 fluxbox) fluxbox_packages ;;
+                cinnamon) cinnamon_packages ;;
             esac
             case "$stage" in
                 desktop-app-geany-*) printf '%s\n' geany ;;
@@ -3414,6 +3680,7 @@ stage_cache_recipe_names() {
     case "$stage" in
         05-kernel*) printf '%s\n' kernel_make install_wireless_regdb ;;
         02-userland) printf '%s\n' userland build_bash build_fish needs_busybox inetutils_tools autotools meson_package ;;
+        02e-linux-installer-v1) printf '%s\n' compile_linux_installer ;;
         02d-extras-*) printf '%s\n' extra_programs vim_tools autotools ;;
         02c-network-tools-*) printf '%s\n' network_tools inetutils_tools autotools ;;
         02a-login-su*) printf '%s\n' login_tools desktop_needs_logind desktop_package desktop_meson autotools ;;
@@ -3427,7 +3694,8 @@ stage_cache_recipe_names() {
         04b-linux-firmware-v2*) printf '%s\n' desktop_firmware desktop_package desktop_meson ;;
         web-stack-v1) printf '%s\n' web_stack download_tls autotools ;;
         desktop-app-firefox-*) printf '%s\n' firefox_application ;;
-        desktop-*) printf '%s\n' desktop_package desktop_meson desktop_host_tools remove_installed_libtool_archives refresh_stale_libtool_metadata desktop_base_packages mate_packages lxde_packages fluxbox_packages ;;
+        desktop-glib-introspection-*) printf '%s\n' desktop_glib_introspection desktop_meson desktop_host_tools desktop_prepare_mesa_tools remove_installed_libtool_archives refresh_stale_libtool_metadata desktop_base_packages cinnamon_packages ;;
+        desktop-*) printf '%s\n' desktop_package desktop_meson desktop_host_tools desktop_prepare_mesa_tools remove_installed_libtool_archives refresh_stale_libtool_metadata desktop_base_packages mate_packages lxde_packages fluxbox_packages cinnamon_packages ;;
     esac
 }
 
@@ -3489,6 +3757,7 @@ stage_cache_stable_packages() {
     case "$stage" in
         desktop-app-firefox-*) printf '%s\n' firefox ;;
         desktop-app-geany-*) printf '%s\n' geany ;;
+        desktop-glib-introspection-*) printf '%s\n' glib ;;
         desktop-*)
             # Stage names have the form desktop-PACKAGE-vN. Key only the
             # package compiled by this stage, not the desktop's source catalog.
@@ -3708,7 +3977,7 @@ session_choose() {
     RESUME_BASE='' FRESH_SUFFIX='' SDK_SUFFIX='' SESSION_LOCK_BASE=''
     if [[ -f "$pointer" && "$mode" != --new ]]; then
         IFS= read -r selected < "$pointer" || selected=''
-        if [[ -f "$selected/build.session" && ! -f "$selected/build.complete" ]]; then
+        if [[ -f "$selected/build.session" && ( ! -f "$selected/build.complete" || ${DIY_FORCE_RESUME_COMPLETE:-no} == yes ) ]]; then
             [[ ! -L "$selected/build.session" ]] || die "$(tr_text 'Build session file must not be a symbolic link' 'Kūrimo sesijos failas negali būti simbolinė nuoroda')"
             chmod 0600 -- "$selected/build.session" || die "$(tr_text 'Could not protect the build session file' 'Nepavyko apsaugoti kūrimo sesijos failo')"
             # Neleisti pradėti antro kūrimo, kol pirmasis vis dar dirba.
@@ -3792,11 +4061,27 @@ session_save() {
 session_complete() {
     touch "$BASE/build.complete"
     rm -f -- "$WORK_DIR/.diy-linux-retry"
-    local pointer selected
+    local pointer selected temporary name
     pointer=$(session_pointer)
     if [[ -f "$pointer" ]]; then
         IFS= read -r selected < "$pointer" || selected=''
         [[ "$selected" != "$BASE" ]] || rm -f -- "$pointer"
+    fi
+    # Password hashes are needed only for an interrupted/resumable build.
+    # Remove them from the completed session file while preserving the
+    # non-secret settings for inspection and future profile editing.
+    if [[ -f "$BASE/build.session" ]]; then
+        temporary="$BASE/build.session.tmp.$$"
+        (umask 077
+            while IFS= read -r name; do
+                case "$name" in
+                    ROOT_PASSWORD_HASH=*|USER_PASSWORD_HASH=*) continue ;;
+                esac
+                printf '%s\n' "$name"
+            done < "$BASE/build.session" > "$temporary"
+        )
+        mv -f -- "$temporary" "$BASE/build.session"
+        chmod 0600 -- "$BASE/build.session"
     fi
 }
 
@@ -4023,6 +4308,15 @@ system_toolchain() {
         cp -a "$SDK/sysroot/." "$ROOT/"
         touch "$STAMPS/sysroot-seeded"
     fi
+    # Senesni profiliai galėjo išsaugoti sysroot-seeded žymą, nors antraštės
+    # vėliau buvo pašalintos. Užpildyti tik trūkstamus SDK header failus:
+    # target GCC wrapper naudoja rootfs kaip --sysroot kompiliavimo metu.
+    mkdir -p "$ROOT/usr/include" "$ROOT/usr/lib"
+    cp -an "$SDK/sysroot/usr/include/." "$ROOT/usr/include/"
+    local archive
+    for archive in libdl.a libpthread.a librt.a libutil.a; do
+        [[ ! -f "$SDK/sysroot/usr/lib/$archive" ]] || cp -an "$SDK/sysroot/usr/lib/$archive" "$ROOT/usr/lib/"
+    done
     # GCC numatytasis sysroot yra SDK/sysroot. Profilio wrappers aiškiai
     # parenka savo rootfs, kad nesumaišytų dviejų kuriamų sistemų bibliotekų.
     mkdir -p "$TOOLS/bin"
@@ -4650,13 +4944,33 @@ meson_package() {
 }
 
 # BEGIN DESKTOP RECIPES
+desktop_glib_introspection() {
+    # Build GLib's Gio/GioUnix GIR and typelibs after g-ir-scanner exists.
+    desktop_meson glib -Dtests=false -Dinstalled_tests=false \
+        -Dintrospection=enabled -Dlibmount=disabled -Dselinux=disabled \
+        -Dman-pages=disabled -Dsysprof=disabled
+}
+
 desktop_base_packages() {
+    # The X11-only option is a lightweight graphical terminal profile. It
+    # needs the X server, keyboard/font plumbing and xterm, not the GTK desktop
+    # stack, audio session, or desktop power/network applets.
+    if [[ "$DESKTOP_CHOICE" == x11 ]]; then
+        printf '%s\n' 'zlib libffi pcre2 expat glib util-macros xorgproto libXau libXdmcp xcb-proto libxcb xtrans libX11 libXext libXrender libXft libXfixes libXi libXrandr libXcursor libXinerama libXcomposite libXdamage libXtst libXres libXpresent libXxf86vm libICE libSM libfontenc libXfont2 libxkbfile font-util font-misc-misc libxcvt libpciaccess libdrm libxshmfence elfutils libmd pixman eudev libevdev mtdev xkbcomp xkeyboard-config libglvnd mesa libepoxy xorg-server xf86-input-evdev libXt libXmu libXpm libXaw xauth xinit xterm'
+        return 0
+    fi
     printf '%s\n' 'zlib libffi pcre2 expat glib libpng freetype fontconfig util-macros xorgproto libXau libXdmcp xcb-proto libxcb xtrans libX11 libXext libXrender libXft libXfixes libXi libXrandr libXcursor libXinerama libXcomposite libXdamage libXtst libXres libXpresent libXxf86vm libICE libSM libfontenc libXfont2 libxkbfile font-util font-misc-misc libxcvt libpciaccess libdrm libxshmfence elfutils libmd pixman dbus eudev libevdev mtdev xkbcomp xkeyboard-config'
-    printf '%s\n' 'libglvnd mesa libepoxy xorg-server xf86-input-evdev libXt libXmu libXpm libXaw xauth xinit xterm cairo harfbuzz fribidi pango libxml2 shared-mime-info gdk-pixbuf at-spi2-core gtk desktop-file-utils hicolor-icon-theme adwaita-icon-theme dejavu-fonts libwnck libtool alsa-lib alsa-utils libcap libsndfile pulseaudio sound-mixer'
+    # Pango GIR is included by CoglPango GIR; build GI tooling first for Cinnamon.
+    if [[ "$DESKTOP_CHOICE" == cinnamon ]]; then printf '%s\n' gobject-introspection; fi
+    printf '%s\n' 'libglvnd mesa libepoxy xorg-server xf86-input-evdev libXt libXmu libXpm libXaw xauth xinit xterm cairo harfbuzz fribidi pango libxml2 shared-mime-info gdk-pixbuf'
+    # at-spi2-core 2.56 ships the matching ATK 2.56 library and headers.
+    # Keep that ABI paired with libatk-bridge from the same release.
+    printf '%s\n' at-spi2-core
+    printf '%s\n' 'gtk desktop-file-utils hicolor-icon-theme adwaita-icon-theme dejavu-fonts libwnck libtool alsa-lib alsa-utils libcap libsndfile pulseaudio sound-mixer'
     if [[ ${PKG_FIREFOX:-no} == yes ]]; then printf '%s\n' bubblewrap; fi
-    # MATE session components and Firefox query UPower over the system bus.
-    # Install its daemon even when the optional MATE power-settings UI is off.
-    if [[ "$DESKTOP_CHOICE" == mate || ${PKG_FIREFOX:-no} == yes ]]; then
+    # MATE and Cinnamon sessions and Firefox query UPower over the system bus.
+    # Install its daemon even when the optional power-settings UI is off.
+    if [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == cinnamon || ${PKG_FIREFOX:-no} == yes ]]; then
         printf '%s\n' 'libusb libgudev'
     fi
     if [[ "$NETWORK" == yes ]]; then
@@ -4735,6 +5049,25 @@ lxde_packages() {
     printf '%s\n' 'dbus-glib duktape libfm-extra menu-cache libfm keybinder lxmenu-data lxde-icon-theme lxpanel lxsession pcmanfm lxappearance lxrandr lxde-common fluxbox'
 }
 
+cinnamon_packages() {
+    # Keep foundational libraries, keyboard settings, and the JS engine ahead
+    # of the Cinnamon shell. The screensaver is deliberately excluded.
+    printf '%s\n' 'xz bzip2 zstd librsvg libusb libgudev libgpg-error libgcrypt libtasn1 p11-kit gcr gobject-introspection gsettings-desktop-schemas'
+    # The menu editor uses CPython; GTK bindings are built after GTK/CMenu GIRs.
+    printf '%s\n' python3.13
+    # Polkit, Cinnamon session, and settings daemon need logind outside systemd.
+    if [[ "$INIT_CHOICE" != systemd ]]; then
+        [[ "$TOOLS_CHOICE" == gnu ]] || printf '%s\n' linux-pam
+        printf '%s\n' elogind
+    fi
+    printf '%s\n' 'duktape polkit accountsservice upower sqlite json-glib lcms2 libgusb colord libnotify iso-codes libxklavier libgnomekbd libogg libvorbis libcanberra libwacom libxkbcommon graphene cogl clutter xcb-util startup-notification dconf ibus mozjs-115 gobject-introspection-legacy gsound cjs cinnamon-menus libdbusmenu xapps python3-xapp xapp-symbolic-icons cinnamon-desktop muffin cinnamon-session cinnamon-settings-daemon'
+    # The control center's network panel needs libnma when networking is built.
+    if [[ "$NETWORK" == yes ]]; then printf '%s\n' libnma; fi
+    # cinnamon-menu-editor is bundled in Cinnamon's source archive.
+    # Give its install and validation a dedicated stage after the shell.
+    printf '%s\n' cinnamon-control-center libgsf nemo cinnamon-translations cinnamon pycairo pygobject cinnamon-menu-editor
+}
+
 desktop_prepare_gi_cross_tools() {
     local wrapper="$BUILD/desktop-host/target-exec"
     local ldd_wrapper="${wrapper%/*}/target-ldd"
@@ -4742,15 +5075,28 @@ desktop_prepare_gi_cross_tools() {
     cat > "$wrapper" <<EOF
 #!/bin/sh
 loader='$ROOT/usr/lib/${ELF_LOADER##*/}'
-library_path='$ROOT/usr/lib:$ROOT/lib'
+library_path='$ROOT/usr/lib:$ROOT/usr/lib/pulseaudio:$ROOT/lib:$BUILD/cogl/cogl/.libs:$BUILD/cogl/cogl-pango/.libs'
 unset LD_LIBRARY_PATH PYTHONPATH
-exec "\$loader" --library-path "\$library_path" "\$@"
+binary=\$1
+shift
+# Resolve libtool's temporary shell wrapper to its target ELF for GI dumps.
+if [ -f "\$binary" ] && head -n 1 "\$binary" | grep -q '^#!'; then
+    program=\$(sed -n "s/^[[:space:]]*program=lt-'\\(.*\\)'\$/\\1/p" "\$binary" | sed -n '1p')
+    target_dir=\${binary%/*}/.libs
+    [ -n "\$program" ] || program=\${binary##*/}
+    target="\$target_dir/lt-\$program"
+    [ -x "\$target" ] || target="\$target_dir/\$program"
+    [ -x "\$target" ] || { echo "target-exec: cannot resolve libtool wrapper \$binary" >&2; exit 126; }
+    library_path="\$target_dir:\$target_dir/../../cogl/.libs:\$target_dir/../../.libs:\$library_path"
+    binary=\$target
+fi
+exec "\$loader" --library-path "\$library_path" "\$binary" "\$@"
 EOF
     chmod 0755 "$wrapper"
     cat > "$ldd_wrapper" <<EOF
 #!/bin/sh
 loader='$ROOT/usr/lib/${ELF_LOADER##*/}'
-library_path='$ROOT/usr/lib:$ROOT/lib'
+library_path='$ROOT/usr/lib:$ROOT/usr/lib/pulseaudio:$ROOT/lib:$BUILD/cogl/cogl/.libs:$BUILD/cogl/cogl-pango/.libs'
 exec "\$loader" --library-path "\$library_path" --list "\$1"
 EOF
     chmod 0755 "$ldd_wrapper"
@@ -4766,22 +5112,27 @@ EOF
             # makes host tools such as /usr/bin/env load the target glibc.
             # Keep those paths in a private variable; target dumper execution
             # is handled separately by GI_CROSS_LAUNCHER.
-            printf '#!/bin/sh\nunset LD_LIBRARY_PATH PYTHONPATH\nexec /usr/bin/g-ir-scanner --lib-dirs-envvar=GI_CROSS_LIBRARY_PATH --use-ldd-wrapper=%s "$@"\n' \
-                "$ldd_wrapper" > "$ROOT/usr/bin/$tool"
+            printf '#!/bin/sh\nunset LD_LIBRARY_PATH PYTHONPATH\nexport CC="%s"\nexport GI_GIR_PATH=\"%s${GI_GIR_PATH:+:$GI_GIR_PATH}\"\nexec /usr/bin/g-ir-scanner --add-include-path=\"%s\" --lib-dirs-envvar=GI_CROSS_LIBRARY_PATH --use-ldd-wrapper=\"%s\" "$@"\n' \
+                "$SYSTEM_BASE/cross-tools/bin/$TARGET-gcc" "$ROOT/usr/share/gir-1.0" "$ROOT/usr/share/gir-1.0" "$ldd_wrapper" > "$ROOT/usr/bin/$tool"
         else
-            printf '#!/bin/sh\nunset LD_LIBRARY_PATH PYTHONPATH\nexec /usr/bin/%s "$@"\n' \
-                "$tool" > "$ROOT/usr/bin/$tool"
+            printf '#!/bin/sh\nunset LD_LIBRARY_PATH PYTHONPATH\nexport GI_GIR_PATH=\"%s${GI_GIR_PATH:+:$GI_GIR_PATH}\"\nexec /usr/bin/%s "$@"\n' \
+                "$ROOT/usr/share/gir-1.0" "$tool" > "$ROOT/usr/bin/$tool"
         fi
         chmod 0755 "$ROOT/usr/bin/$tool"
     done
-    python3 - "$CROSS_FILE" "$wrapper" <<'PY'
+    python3 - "$CROSS_FILE" "$wrapper" \
+        "$SYSTEM_BASE/cross-tools/bin/$TARGET-gcc" \
+        "$SYSTEM_BASE/cross-tools/bin/$TARGET-g++" <<'PY'
 from pathlib import Path
 import re
 import sys
 
-cross_file, wrapper = map(Path, sys.argv[1:])
+cross_file, wrapper = map(Path, sys.argv[1:3])
+cc, cxx = sys.argv[3:]
 text = cross_file.read_text()
 text = re.sub(r"(?m)^\s*exe_wrapper\s*=.*\n?", "", text)
+text = re.sub(r"(?m)^c\s*=.*$", f"c = '{cc}'", text, count=1)
+text = re.sub(r"(?m)^cpp\s*=.*$", f"cpp = '{cxx}'", text, count=1)
 marker = "[binaries]"
 if marker not in text:
     raise SystemExit("MATE cross file has no [binaries] section")
@@ -4791,19 +5142,88 @@ PY
     export GI_CROSS_LAUNCHER="$wrapper"
 }
 
+desktop_generate_atk_introspection() {
+    local gir="$BUILD/atk/Atk-1.0.gir"
+    local typelib="$BUILD/atk/Atk-1.0.typelib"
+    local atk_pc="$ROOT/usr/lib/pkgconfig/atk.pc"
+    local atk_header="$ROOT/usr/include/atk-1.0/atk/atk.h"
+    local atk_lib="$ROOT/usr/lib/libatk-1.0.so"
+    local -a atk_headers=()
+
+    mkdir -p "$BUILD/atk"
+    # The final rootfs intentionally drops development headers. Reuse a valid
+    # GIR from the build tree on resume; only require headers when generating it.
+    if ! grep -q 'c:type="AtkObject"' "$gir" 2>/dev/null; then
+        [[ -f "$atk_pc" && -f "$atk_header" && -e "$atk_lib" ]] ||
+            die 'ATK introspection requires target atk.pc, public headers, and libatk-1.0'
+        [[ -f "$ROOT/usr/share/gir-1.0/GObject-2.0.gir" ]] ||
+            die 'ATK introspection requires the target GObject-2.0.gir metadata'
+        # The umbrella header includes declarations from the other installed
+        # public headers, but the scanner only emits those declarations when all
+        # of them are explicit inputs. Reject an old, empty GIR if it exists.
+        rm -f "$gir" "$typelib"
+        mapfile -t atk_headers < <(find "$ROOT/usr/include/atk-1.0/atk" \
+            -maxdepth 1 -type f -name '*.h' -print | sort)
+        ((${#atk_headers[@]})) || die 'ATK introspection found no public headers'
+        log_package_build_flags atk-introspection g-ir-scanner \
+            --namespace=Atk --nsversion=1.0 --include=GObject-2.0 \
+            --library=atk-1.0 --pkg=atk
+        LDFLAGS="${LDFLAGS:+$LDFLAGS }-Wl,--sysroot=$SDK/sysroot" \
+        "$ROOT/usr/bin/g-ir-scanner" --quiet \
+            --namespace=Atk --nsversion=1.0 --include=GObject-2.0 \
+            --output="$gir" --c-include=atk/atk.h \
+            --identifier-prefix=Atk --symbol-prefix=atk \
+            --library=atk-1.0 \
+            --library-path="$SDK/sysroot/usr/lib" \
+            --library-path="$ROOT/usr/lib" \
+            --pkg=atk --pkg-export=atk \
+            --cflags-begin -D__ATK_H_INSIDE__ \
+                "-I$ROOT/usr/include/atk-1.0" \
+                "-I$ROOT/usr/include/glib-2.0" \
+                "-I$ROOT/usr/lib/glib-2.0/include" \
+            --cflags-end "${atk_headers[@]}"
+    fi
+    if [[ ! -s "$typelib" ]]; then
+        "$ROOT/usr/bin/g-ir-compiler" \
+            --includedir="$ROOT/usr/share/gir-1.0" \
+            --output="$typelib" "$gir"
+    fi
+    install -Dm0644 "$gir" "$ROOT/usr/share/gir-1.0/Atk-1.0.gir"
+    install -Dm0644 "$typelib" "$ROOT/usr/lib/girepository-1.0/Atk-1.0.typelib"
+}
+
 desktop_needs_logind() {
-    [[ ${DESKTOP_CHOICE:-none} == mate ||
+    [[ ${DESKTOP_CHOICE:-none} == mate || ${DESKTOP_CHOICE:-none} == cinnamon ||
        ${PKG_MATE_CONTROL_CENTER:-no} == yes ||
        ${PKG_MATE_POWER_MANAGER:-no} == yes ]]
 }
 
 build_librsvg() {
-    local rust_key=${RUST_TARGET//-/_}
+    local rust_key=${RUST_TARGET//-/_} source pixbuf_mes
     local -x CARGO_HOME="$WORK_DIR/cargo-cache" CARGO_BUILD_JOBS="$JOBS"
-    # librsvg's in-tree uninstalled pkg-config file points at the build root,
-    # while Meson emits the shared library in its rsvg/ subdirectory. Cargo's
-    # pixbufloader-svg crate links this library before installation, so provide
-    # its actual build-time directory explicitly.
+    source=$(unpack librsvg)
+    pixbuf_mes=$source/gdk-pixbuf-loader/meson.build
+    # The cross pkg-config wrapper sysroots gdk_pixbuf_moduledir. Using that
+    # value as Meson's install_dir makes DESTDIR prepend the sysroot twice and
+    # strands the SVG loader under /home/.../rootfs. Install it at the target's
+    # normal /usr/lib loader path instead.
+    python3 - "$pixbuf_mes" <<'PY_LIBRSVG_LOADER_DIR'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = "install_dir: pixbuf_dep.get_variable(pkgconfig: 'gdk_pixbuf_moduledir', pkgconfig_define: ['prefix', prefix]),"
+new = "install_dir: get_option('prefix') / get_option('libdir') / 'gdk-pixbuf-2.0' / '2.10.0' / 'loaders',"
+if old in s:
+    s = s.replace(old, new, 1)
+elif new not in s:
+    raise SystemExit('Could not find librsvg SVG loader install path')
+p.write_text(s)
+PY_LIBRSVG_LOADER_DIR
+    # Remove the malformed loader from an earlier build before installing the
+    # corrected module. The expression below is the duplicated DESTDIR path.
+    rm -rf -- "$ROOT$ROOT/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+    # Cargo's pixbufloader-svg crate links librsvg from Meson's in-tree rsvg/.
     local -x RUSTFLAGS="-C link-arg=--sysroot=$ROOT -C link-arg=-L$BUILD/librsvg/rsvg"
     export "CARGO_TARGET_${rust_key^^}_LINKER=$CC" "CC_${rust_key}=$CC" \
         "AR_${rust_key}=$AR" "CXX_${rust_key}=$CXX"
@@ -4814,6 +5234,37 @@ build_librsvg() {
 
 # Grafikos receptai: eksperimentinis x86_64 Xorg + Mesa variantas.
 # Jokių šeimininko bibliotekų nekopijuojama į rootfs.
+desktop_xorg_server() {
+    local source meson_file proto_source
+    source=$(unpack xorg-server)
+    proto_source=$(unpack xorgproto)
+    local -x CPPFLAGS="${CPPFLAGS:-} -I$proto_source/include"
+    meson_file="$source/include/meson.build"
+    [[ -f "$meson_file" ]] || die "Xorg source is missing include/meson.build"
+    # Avoid embedding the per-build sysroot path in Xorg's GLX module.
+    python3 - "$meson_file" <<'PY_XORG'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = "conf_data.set_quoted('DRI_DRIVER_PATH', dri_dep.get_pkgconfig_variable('dridriverdir'))"
+new = "conf_data.set_quoted('DRI_DRIVER_PATH', '/usr/lib/dri')"
+if old in s:
+    s = s.replace(old, new, 1)
+elif new not in s:
+    raise SystemExit('Could not locate Xorg DRI_DRIVER_PATH configuration')
+p.write_text(s)
+PY_XORG
+    local -a xorg_flags=(
+        -Dxorg=true -Dxvfb=true -Dxnest=false -Dxephyr=false
+        -Dpciaccess=true -Dsha1=libmd -Dglamor=true -Dglx=true
+        -Ddri1=false -Ddri2=true -Ddri3=true -Dudev=true -Dudev_kms=true
+        -Dsystemd_logind=false -Dsuid_wrapper=true -Dsecure-rpc=false
+        -Dxkb_dir=/usr/share/X11/xkb -Dxkb_output_dir=/var/lib/xkb -Dxkb_bin_dir=/usr/bin
+    )
+    desktop_meson xorg-server "${xorg_flags[@]}"
+}
+
 desktop_meson() {
     local name=$1 source ninja_status ninja_log; shift
     # GCC adds sysroot/usr/local/include to its default include search path.
@@ -4871,13 +5322,76 @@ desktop_host_tools() {
             "$ROOT/usr/lib/${ELF_LOADER##*/}" "$ROOT" "$ROOT" "$tool" > "$BUILD/desktop-host/bin/$tool"
         chmod +x "$BUILD/desktop-host/bin/$tool"
     done
-    for tool in glib-genmarshal glib-mkenums gdbus-codegen g-ir-scanner; do
+    for tool in glib-genmarshal glib-mkenums gdbus-codegen; do
         [[ -x "$ROOT/usr/bin/$tool" ]] || continue
         printf '#!/bin/sh\nunset UNINSTALLED_GLIB_SRCDIR\nexec python3 "%s/usr/bin/%s" "$@"\n' \
             "$ROOT" "$tool" > "$BUILD/desktop-host/bin/$tool"
         chmod +x "$BUILD/desktop-host/bin/$tool"
     done
+    if [[ -x "$ROOT/usr/bin/g-ir-scanner" ]] && command -v /usr/bin/g-ir-scanner >/dev/null 2>&1; then
+        printf '#!/bin/sh\nunset LD_LIBRARY_PATH PYTHONPATH UNINSTALLED_GLIB_SRCDIR\nexport GI_GIR_PATH="%s/usr/share/gir-1.0${GI_GIR_PATH:+:$GI_GIR_PATH}"\nexec /usr/bin/g-ir-scanner --add-include-path="%s/usr/share/gir-1.0" --lib-dirs-envvar=GI_CROSS_LIBRARY_PATH --use-ldd-wrapper="%s/desktop-host/target-ldd" "$@"\n' \
+            "$ROOT" "$ROOT" "$BUILD" > "$BUILD/desktop-host/bin/g-ir-scanner"
+        chmod +x "$BUILD/desktop-host/bin/g-ir-scanner"
+    fi
     export PATH="$BUILD/desktop-host/bin:$PATH"
+}
+
+# Mesa 26.2's Intel CLC tools execute on the build host during a cross build.
+# Build them natively once, outside the target sysroot, then use them from the
+# target Mesa configure step. This avoids linking LLVM/Clang into the target OS.
+desktop_prepare_mesa_tools() {
+    local source host_build host_prefix tool
+    local -a host_env=(env -u CC -u CXX -u AR -u RANLIB -u STRIP \
+        -u CFLAGS -u CXXFLAGS -u CPPFLAGS -u LDFLAGS \
+        -u PKG_CONFIG_SYSROOT_DIR -u PKG_CONFIG_LIBDIR -u PKG_CONFIG_PATH)
+
+    [[ "$DESKTOP_CHOICE" != none ]] || return 0
+    command -v llvm-config >/dev/null 2>&1 ||
+        die "Mesa Intel drivers need host llvm-config, Clang, SPIRV-Tools and a matching LLVM-SPIRV development package"
+    command -v clang >/dev/null 2>&1 ||
+        die "Mesa Intel drivers need host Clang matching the installed LLVM version"
+    "${host_env[@]}" pkg-config --exists LLVMSPIRVLib SPIRV-Tools ||
+        die "Mesa Intel drivers need LLVMSPIRVLib and SPIRV-Tools development files matching host LLVM"
+
+    source=$(unpack mesa)
+    host_build="$BUILD/desktop-host/mesa-tools-build"
+    host_prefix="$BUILD/desktop-host/mesa-tools"
+    mkdir -p "$BUILD/desktop-host"
+    if [[ ! -f "$host_build/build.ninja" ]]; then
+        "${host_env[@]}" meson setup "$host_build" "$source" \
+            --prefix="$host_prefix" --libdir=lib --buildtype=release \
+            --wrap-mode=nodownload -Dauto_features=disabled \
+            -Dplatforms=[] -Dgallium-drivers=[] -Dvulkan-drivers=[] \
+            -Dglx=disabled -Degl=disabled -Dgbm=disabled -Dglvnd=disabled \
+            -Dexpat=enabled -Dspirv-tools=enabled \
+            -Dllvm=enabled -Dshared-llvm=enabled -Dtools=intel \
+            -Dmesa-clc=enabled -Dinstall-mesa-clc=true \
+            -Dprecomp-compiler=enabled -Dinstall-precomp-compiler=true \
+            -Dbuild-tests=false -Dhtml-docs=disabled
+    else
+        "${host_env[@]}" meson configure "$host_build" \
+            --prefix="$host_prefix" --libdir=lib \
+            -Dplatforms=[] -Dgallium-drivers=[] -Dvulkan-drivers=[] \
+            -Dglx=disabled -Degl=disabled -Dgbm=disabled -Dglvnd=disabled \
+            -Dexpat=enabled -Dspirv-tools=enabled \
+            -Dllvm=enabled -Dshared-llvm=enabled -Dtools=intel \
+            -Dmesa-clc=enabled -Dinstall-mesa-clc=true \
+            -Dprecomp-compiler=enabled -Dinstall-precomp-compiler=true \
+            -Dbuild-tests=false -Dhtml-docs=disabled
+    fi
+    "${host_env[@]}" ninja -C "$host_build" -j"$JOBS"
+    "${host_env[@]}" meson install -C "$host_build" --no-rebuild
+
+    export PATH="$host_prefix/bin:$PATH"
+    for tool in mesa_clc vtn_bindgen2 intel_clc; do
+        if [[ -x "$host_prefix/bin/$tool" ]]; then
+            continue
+        fi
+        # intel_clc is needed only when the selected Mesa revision installs it;
+        # mesa_clc and vtn_bindgen2 are required by Meson's system-tool mode.
+        [[ "$tool" == intel_clc ]] ||
+            die "Host Mesa tool build did not install required $tool"
+    done
 }
 
 # Dažnos paketų parinktys žemiau:
@@ -4904,9 +5418,1177 @@ desktop_host_tools() {
 #   -Dsystemd=false/disabled praleidžia systemd integraciją kituose init profiliuose.
 # Pastaba: kai kurie upstream projektai pagal nutylėjimą automatiškai aptinka
 # funkcijas. Jei jų reikia atsisakyti, aiškų disable jungiklį palik aktyvų.
+build_host_sassc() {
+    local libsass_source sassc_source sassc_bin="$BUILD/desktop-host/bin/sassc"
+    [[ -x "$sassc_bin" ]] && return 0
+    libsass_source=$(unpack libsass)
+    sassc_source=$(unpack sassc)
+    mkdir -p "${sassc_bin%/*}"
+    # Cinnamon compiles its SCSS theme on the build host. Build SassC as a
+    # native host tool with its LibSass dependency statically linked.
+    make -C "$sassc_source" -j"$JOBS" BUILD=static \
+        SASS_LIBSASS_PATH="$libsass_source"
+    install -m0755 "$sassc_source/bin/sassc" "$sassc_bin"
+}
+
+desktop_restore_meson_development_outputs() {
+    # configure_desktop prunes development headers after a successful build.
+    # A later --resume can invalidate a desktop package and need those headers
+    # again, so reinstall the already-built target Meson outputs without
+    # rebuilding them before compiling a dependent package.
+    local package build_dir source
+    # Re-add public headers directly from pinned source trees. This covers
+    # Xorg Autotools packages such as libXext that are not Meson builds.
+    for package in $(desktop_base_packages) $(cinnamon_packages); do
+        [[ -n ${VERSION[$package]:-} ]] || continue
+        source=$(unpack "$package")
+        [[ -d "$source/include" ]] || continue
+        cp -an "$source/include/." "$ROOT/usr/include/"
+    done
+    # Restore the target C library headers too: GCC's stdint.h uses
+    # include_next to reach the selected libc's stdint.h during rebuilds.
+    mkdir -p "$ROOT/usr/include"
+    cp -an "$SDK/sysroot/usr/include/." "$ROOT/usr/include/"
+    # libX11 uses Autotools and its headers are therefore not restored by the
+    # Meson loop below. Cinnamon's X11 compositor needs the public headers.
+    local expat_source startup_source x11_source xtrans_source xcb_xml_file zlib_source xz_source
+    expat_source=$(unpack expat)
+    install -m0644 "$expat_source/lib/expat.h" "$expat_source/lib/expat_external.h" "$ROOT/usr/include/"
+    # CPython's optional compression modules are enabled from pkg-config.
+    # Restore the matching public headers as well as their runtime libraries.
+    zlib_source=$(unpack zlib)
+    [[ -f "$zlib_source/zconf.h" ]] || die 'zlib zconf.h is missing after the zlib build'
+    install -m0644 "$zlib_source/zlib.h" "$zlib_source/zconf.h" "$ROOT/usr/include/"
+    xz_source=$(unpack xz)
+    mkdir -p "$ROOT/usr/include/lzma"
+    cp -an "$xz_source/src/liblzma/api/lzma.h" "$ROOT/usr/include/lzma.h"
+    cp -an "$xz_source/src/liblzma/api/lzma/." "$ROOT/usr/include/lzma/"
+    # Libffi is an Autotools package and its build tree may be absent when a
+    # cached artifact satisfied the original stage. Recreate/install the
+    # development interface so CPython's ctypes can compile deterministically.
+    if [[ -f "$BUILD/libffi/Makefile" ]]; then
+        make -C "$BUILD/libffi" -j"$JOBS"
+        make -C "$BUILD/libffi" DESTDIR="$ROOT" install
+    else
+        autotools libffi --disable-static --disable-multi-os-directory
+    fi
+    startup_source=$(unpack startup-notification)
+    mkdir -p "$ROOT/usr/include/libsn"
+    cp -an "$startup_source/libsn/"*.h "$ROOT/usr/include/libsn/"
+    local canberra_source
+    canberra_source=$(unpack libcanberra)
+    install -m0644 "$canberra_source/src/canberra.h" "$canberra_source/src/canberra-gtk.h" "$ROOT/usr/include/"
+    local libxcb_source xcb_proto_source xcb_gen_dir xcb_header_name
+    libxcb_source=$(unpack libxcb)
+    xcb_proto_source=$(unpack xcb-proto)
+    xcb_gen_dir=$(mktemp -d "$BUILD/.desktop-header-xcbgen.XXXXXX")
+    mkdir -p "$ROOT/usr/include/xcb"
+    install -m0644 "$libxcb_source/src/xcb.h" "$libxcb_source/src/xcbext.h" \
+        "$libxcb_source/src/xcb_windefs.h" "$ROOT/usr/include/xcb/"
+    for xcb_xml_file in "$xcb_proto_source"/src/*.xml; do
+        xcb_header_name=${xcb_xml_file##*/}
+        xcb_header_name=${xcb_header_name%.xml}
+        (cd "$xcb_gen_dir" && PYTHONPATH="$xcb_proto_source" \
+            python3 "$libxcb_source/src/c_client.py" -c "libxcb ${VERSION[libxcb]}" \
+            -l 3 -s 3 -p "$xcb_proto_source/src" "$xcb_xml_file")
+        install -m0644 "$xcb_gen_dir/$xcb_header_name.h" "$ROOT/usr/include/xcb/$xcb_header_name.h"
+    done
+    rm -rf -- "$xcb_gen_dir"
+    # libxml2 generates this public configuration header during configure;
+    # it is not in the source include tree and image cleanup prunes it.
+    # Cinnamon includes parser.h while compiling its settings/control code.
+    local libxml2_xmlversion="$BUILD/libxml2/include/libxml/xmlversion.h"
+    [[ -s "$libxml2_xmlversion" ]] || die 'libxml2 generated xmlversion.h is missing after its build'
+    install -Dm0644 "$libxml2_xmlversion" "$ROOT/usr/include/libxml/xmlversion.h"
+    x11_source=$(unpack libX11)
+    mkdir -p "$ROOT/usr/include/X11"
+    cp -a "$x11_source/include/X11/." "$ROOT/usr/include/X11/"
+    xtrans_source=$(unpack xtrans)
+    mkdir -p "$ROOT/usr/include/X11/Xtrans"
+    cp -a "$xtrans_source/"*.h "$ROOT/usr/include/X11/Xtrans/"
+    if [[ -f "$BUILD/libX11/include/X11/XlibConf.h" ]]; then
+        install -m0644 "$BUILD/libX11/include/X11/XlibConf.h" "$ROOT/usr/include/X11/XlibConf.h"
+    fi
+    for package in $(desktop_base_packages) $(cinnamon_packages); do
+        build_dir="$BUILD/$package"
+        if [[ -f "$build_dir/meson-private/coredata.dat" ]]; then
+            DESTDIR="$ROOT" meson install -C "$build_dir" --no-rebuild >/dev/null ||
+                die "Could not restore development outputs for $package"
+        elif [[ "$package" == cogl && -f "$build_dir/cogl/Makefile" ]]; then
+            # These legacy Cinnamon graphics libraries use Autotools. Their
+            # development headers were pruned from rootfs after the first
+            # build, but Cinnamon itself still needs them when its stage is
+            # rebuilt independently.
+            make -C "$build_dir/cogl" DESTDIR="$ROOT" install-cogl_proto_includeHEADERS \
+                install-cogldeprecatedincludeHEADERS install-coglincludeHEADERS \
+                install-nodist_coglincludeHEADERS >/dev/null ||
+                die "Could not restore development outputs for $package"
+        elif [[ "$package" == clutter && -f "$build_dir/clutter/Makefile" ]]; then
+            # Install only public headers, avoiding install-data's dependency
+            # on rebuilding Clutter objects that may need pruned headers.
+            make -C "$build_dir/clutter" DESTDIR="$ROOT" install-cally_includeHEADERS \
+                install-clutter_deprecatedHEADERS install-clutter_includeHEADERS \
+                install-cluttercex100_includeHEADERS install-clutteregl_includeHEADERS \
+                install-clutterevdev_includeHEADERS install-cluttergdk_includeHEADERS \
+                install-clutterglx_includeHEADERS install-cluttermir_includeHEADERS \
+                install-clutterosx_includeHEADERS install-clutterwayland_includeHEADERS \
+                install-clutterwin_includeHEADERS install-clutterx11_includeHEADERS \
+                install-nodist_clutter_includeHEADERS >/dev/null ||
+                die "Could not restore development outputs for $package"
+        elif [[ "$package" == fontconfig && -f "$build_dir/Makefile" ]]; then
+            # Fontconfig's public header is generated by configure and is not
+            # present in its pinned source tree.
+            make -C "$build_dir" DESTDIR="$ROOT" install-data >/dev/null ||
+                die "Could not restore development outputs for $package"
+        fi
+    done
+    if [[ "$DESKTOP_CHOICE" == cinnamon ]]; then
+        desktop_prepare_gi_cross_tools
+    fi
+    # The final rootfs cleanup removes static glibc link shims; Muffin's
+    # cross-link step still requests -lpthread, so restore them temporarily.
+    mkdir -p "$ROOT/usr/lib"
+    local archive
+    for archive in libdl.a libpthread.a librt.a libutil.a; do
+        [[ ! -f "$SDK/sysroot/usr/lib/$archive" ]] ||
+            install -m0644 "$SDK/sysroot/usr/lib/$archive" "$ROOT/usr/lib/$archive"
+    done
+}
+
 desktop_package() {
-    local name=$1 source
+    local name=$1 source python_ssl_patch
     case "$name" in
+        python3.13)
+            # CPython is a runtime dependency of Cinnamon's menu editor. Build
+            # a native build interpreter from the same source first: the host
+            # may ship a different Python minor release. Then cross-build the
+            # target runtime without PGO/LTO or target benchmark execution.
+            local python_host_build="$BUILD/python3.13-host"
+            source=$(unpack python3.13)
+            # OpenSSL 4 makes ASN1_STRING opaque. CPython 3.13.5 still reads
+            # fields directly in certificate decoding; use public accessors.
+            python_ssl_patch="$BUILD/python3.13-openssl-opaque-asn1.py"
+            cat > "$python_ssl_patch" <<'PYTHON_SSL_PATCH'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1]) / "Modules/_ssl.c"
+text = path.read_text()
+replacements = [
+    ("if (name->d.ip->length == 4) {\n                    unsigned char *p = name->d.ip->data;",
+     "if (ASN1_STRING_length(name->d.ip) == 4) {\n                    const unsigned char *p = ASN1_STRING_get0_data(name->d.ip);"),
+    ("} else if (name->d.ip->length == 16) {\n                    unsigned char *p = name->d.ip->data;",
+     "} else if (ASN1_STRING_length(name->d.ip) == 16) {\n                    const unsigned char *p = ASN1_STRING_get0_data(name->d.ip);"),
+    ("ostr = PyUnicode_FromStringAndSize((char *)uri->data,\n                                           uri->length);",
+     "ostr = PyUnicode_FromStringAndSize((const char *)ASN1_STRING_get0_data(uri),\n                                           ASN1_STRING_length(uri));"),
+    ("ouri = PyUnicode_FromStringAndSize((char *)uri->data,\n                                               uri->length);",
+     "ouri = PyUnicode_FromStringAndSize((const char *)ASN1_STRING_get0_data(uri),\n                                               ASN1_STRING_length(uri));"),
+]
+for old, new in replacements:
+    count = text.count(old)
+    if count == 1:
+        text = text.replace(old, new, 1)
+    elif count != 0 or new not in text:
+        raise SystemExit("unexpected CPython _ssl.c source shape; patch not applied")
+path.write_text(text)
+PYTHON_SSL_PATCH
+            python3 "$python_ssl_patch" "$source"
+            rm -f "$python_ssl_patch"
+            # A previous failed attempt may have cached target pkg-config
+            # results in this native build directory. A completed host Python
+            # is reusable; otherwise configure with host-only discovery.
+            if [[ ! -x "$python_host_build/python" ]]; then
+                rm -rf -- "$python_host_build"
+                mkdir -p "$python_host_build"
+                log_package_build_flags python3.13-host native-autotools \
+                    --prefix="$python_host_build/install" --with-ensurepip=no \
+                    --without-lto --disable-test-modules
+                (
+                    cd "$python_host_build"
+                    env -u CC -u CXX -u AR -u RANLIB -u STRIP \
+                        -u CFLAGS -u CXXFLAGS -u CPPFLAGS -u LDFLAGS \
+                        -u PKG_CONFIG -u PKG_CONFIG_SYSROOT_DIR -u PKG_CONFIG_LIBDIR -u PKG_CONFIG_PATH \
+                        "$source/configure" --prefix="$python_host_build/install" \
+                        --with-ensurepip=no --without-lto --disable-test-modules
+                    env -u CC -u CXX -u AR -u RANLIB -u STRIP \
+                        -u CFLAGS -u CXXFLAGS -u CPPFLAGS -u LDFLAGS \
+                        -u PKG_CONFIG -u PKG_CONFIG_SYSROOT_DIR -u PKG_CONFIG_LIBDIR -u PKG_CONFIG_PATH \
+                        make -j"$JOBS"
+                    [[ -x ./python ]] || die 'Native CPython build interpreter is missing'
+                )
+            fi
+            rm -rf -- "$BUILD/python3.13"
+            mkdir -p "$BUILD/python3.13"
+            local python_config_site="$BUILD/python3.13-config.site"
+            local python_pkg_config="$BUILD/python3.13-pkg-config"
+            cat > "$python_config_site" <<'PYTHON_CONFIG_SITE'
+# Linux target device nodes are provided by devtmpfs at runtime.
+ac_cv_file__dev_ptmx=yes
+ac_cv_file__dev_ptc=no
+# CPython falls back to probing linkable ncurses libraries even when the
+# matching development headers are absent. Do not build optional curses
+# extension modules in this deliberately minimal target profile.
+ac_cv_search_initscr=no
+ac_cv_search_new_panel=no
+# uuid.h comes from optional libuuid development files; avoid a partial
+# UUID probe that can link to the runtime library but cannot compile _uuid.
+ac_cv_header_uuid_h=no
+ac_cv_header_uuid_uuid_h=no
+PYTHON_CONFIG_SITE
+            cat > "$python_pkg_config" <<'PYTHON_PKG_CONFIG'
+#!/bin/sh
+# The minimal target profile intentionally omits curses and libuuid
+# development headers; their runtime libraries alone must not enable modules.
+case " $* " in
+    *' ncursesw '*|*' ncurses '*|*' panelw '*|*' panel '*|*' uuid '*) exit 1 ;;
+esac
+exec /usr/bin/pkg-config "$@"
+PYTHON_PKG_CONFIG
+            chmod 0755 "$python_pkg_config"
+            log_package_build_flags python3.13 autotools \
+                --build="$HOST" --host="$TARGET" --prefix=/usr --libdir=/usr/lib \
+                --enable-shared --with-ensurepip=no --with-system-expat \
+                --with-build-python="$python_host_build/python" --disable-test-modules \
+                --without-readline --without-tk --without-lto --disable-ipv6
+            (
+                cd "$BUILD/python3.13"
+                CONFIG_SITE="$python_config_site" PKG_CONFIG="$python_pkg_config" \
+                    "$source/configure" --build="$HOST" --host="$TARGET" \
+                    --prefix=/usr --libdir=/usr/lib --enable-shared \
+                    --with-ensurepip=no --with-system-expat \
+                    --with-build-python="$python_host_build/python" \
+                    --disable-test-modules --without-readline --without-tk \
+                    --without-lto --disable-ipv6
+                make -j"$JOBS"
+                make DESTDIR="$ROOT" install
+            )
+            [[ -x "$ROOT/usr/bin/python3.13" && -f "$ROOT/usr/lib/libpython3.13.so" ]] ||
+                die 'CPython 3.13 runtime was not installed into the target rootfs'
+            ln -sfn python3.13 "$ROOT/usr/bin/python3"
+            install -d "$ROOT/usr/lib/python3.13/site-packages"
+            printf '%s\n' /usr/lib/python3/dist-packages > \
+                "$ROOT/usr/lib/python3.13/site-packages/cinnamon-dist-packages.pth" ;;
+        pycairo)
+            # The target interpreter is run through the profile's QEMU wrapper
+            # during Meson introspection; headers and Cairo come from rootfs.
+            desktop_prepare_gi_cross_tools
+            desktop_meson pycairo -Dpython=/usr/bin/python3 -Dtests=false ;;
+        pygobject)
+            # GTK 3, CMenu, GLib and Cairo typelibs/libraries are now present.
+            desktop_prepare_gi_cross_tools
+            # Pycairo itself is installed for Python applications, but its
+            # optional C API integration is disabled here: Meson would resolve
+            # the target Python include path as a host absolute path while
+            # cross compiling under QEMU.
+            desktop_meson pygobject -Dpython=/usr/bin/python3 -Dtests=false -Dpycairo=disabled ;;
+        xz) autotools xz --disable-static --disable-doc --disable-nls ;;
+        ibus)
+            local ibus_pkgconfig_for_build="$BUILD/desktop-host/pkg-config-for-build"
+            local -a ibus_flags=(
+                --disable-gtk2 --disable-gtk4 --disable-wayland
+                --disable-appindicator --disable-ui --disable-systemd-services --disable-setup
+                --disable-python2 --disable-python-library --disable-tests
+                --disable-emoji-dict --disable-unicode-dict
+                --enable-introspection=yes --enable-vala=no
+            )
+            local ibus_introspection_makefile="$ROOT/usr/share/gobject-introspection-1.0/Makefile.introspection"
+            # Cinnamon imports IBus unconditionally while starting its shell.
+            # Build its daemon, GTK3/XIM integration and typelib; omit GTK2/4,
+            # Wayland and systemd integration because this desktop uses X11
+            # under dinit and those components are not part of this profile.
+            # Package stages prune development metadata from the runtime root;
+            # restore dconf's already-built .pc/header files for configure.
+            local ibus_dep
+            for ibus_dep in glib libpng gdk-pixbuf cairo harfbuzz fribidi pango atk at-spi2-core dconf gtk; do
+                [[ ! -f "$BUILD/$ibus_dep/build.ninja" ]] ||
+                    DESTDIR="$ROOT" meson install -C "$BUILD/$ibus_dep" --no-rebuild
+            done
+            mkdir -p "${ibus_pkgconfig_for_build%/*}"
+            cat > "$ibus_pkgconfig_for_build" <<'IBUS_PKGCONFIG_FOR_BUILD'
+#!/bin/sh
+unset PKG_CONFIG_SYSROOT_DIR PKG_CONFIG_LIBDIR PKG_CONFIG_PATH
+exec /usr/bin/pkg-config "$@"
+IBUS_PKGCONFIG_FOR_BUILD
+            chmod 0755 "$ibus_pkgconfig_for_build"
+            # GI's compiler is a host utility, while the target-root copy is a
+            # Python script and cannot be executed through the target ELF loader.
+            cat > "$BUILD/desktop-host/bin/g-ir-compiler" <<EOF
+#!/bin/sh
+unset LD_LIBRARY_PATH PYTHONPATH
+export GI_GIR_PATH="$ROOT/usr/share/gir-1.0\${GI_GIR_PATH:+:\$GI_GIR_PATH}"
+exec /usr/bin/g-ir-compiler "\$@"
+EOF
+            chmod 0755 "$BUILD/desktop-host/bin/g-ir-compiler"
+            local ibus_source ibus_build
+            for ibus_dep in xorgproto xtrans libXau libXdmcp libxcb libX11 libXext \
+                            libXrender libXfixes libXi libXrandr libXcursor libXinerama \
+                            libXcomposite libXdamage libXtst; do
+                if [[ -f "$BUILD/$ibus_dep/build.ninja" ]]; then
+                    DESTDIR="$ROOT" meson install -C "$BUILD/$ibus_dep" --no-rebuild
+                elif [[ -f "$BUILD/$ibus_dep/Makefile" ]]; then
+                    make -C "$BUILD/$ibus_dep" DESTDIR="$ROOT" install-data
+                fi
+            done
+            ibus_source=$(unpack ibus)
+            ibus_build="$BUILD/ibus"
+            # IBus 1.5.32's pre-generated CLI C file references Wayland APIs
+            # even when Wayland is disabled. Cinnamon uses ibus-daemon directly;
+            # omit only the optional `ibus` CLI to keep this X11 profile clean.
+            sed -i 's/^bin_PROGRAMS = ibus.*/bin_PROGRAMS =/' \
+                "$ibus_source/tools/Makefile.am" "$ibus_source/tools/Makefile.in"
+            remove_installed_libtool_archives
+            mkdir -p "$ibus_build"
+            log_package_build_flags ibus autotools \
+                --build="$HOST" --host="$TARGET" --prefix=/usr --libdir=/usr/lib \
+                --sysconfdir=/etc --localstatedir=/var "${ibus_flags[@]}"
+            (
+                cd "$ibus_build"
+                PKG_CONFIG_FOR_BUILD="$ibus_pkgconfig_for_build" \
+                    xorg_cv_malloc0_returns_null=no "$ibus_source/configure" \
+                    --build="$HOST" --host="$TARGET" --prefix=/usr --libdir=/usr/lib \
+                    --sysconfdir=/etc --localstatedir=/var "${ibus_flags[@]}"
+                refresh_stale_libtool_metadata "$ibus_build"
+                # pkg-config's sysroot rewriting makes IBus' configure macro
+                # embed a doubled target-root path for these GIR helpers.
+                # Override them with the valid build-host wrappers at make time.
+                make -j"$JOBS" \
+                    INTROSPECTION_MAKEFILE="$ibus_introspection_makefile" \
+                    INTROSPECTION_SCANNER="$BUILD/desktop-host/bin/g-ir-scanner" \
+                    INTROSPECTION_COMPILER="$BUILD/desktop-host/bin/g-ir-compiler"
+                make DESTDIR="$ROOT" install \
+                    INTROSPECTION_MAKEFILE="$ibus_introspection_makefile" \
+                    INTROSPECTION_SCANNER="$BUILD/desktop-host/bin/g-ir-scanner" \
+                    INTROSPECTION_COMPILER="$BUILD/desktop-host/bin/g-ir-compiler"
+            )
+            remove_installed_libtool_archives ;;
+        accountsservice)
+            # Cinnamon imports AccountsService for user and avatar management.
+            # Restore development outputs removed between package stages, and
+            # skip upstream Python tests that require dbusmock on the host.
+            local accounts_dep accounts_source
+            accounts_source=$(unpack accountsservice)
+            sed -i "s|^subdir('tests')$|# Tests need host dbusmock, omitted for cross builds.|" \
+                "$accounts_source/meson.build"
+            # The base libxcrypt stage removes development headers afterward;
+            # restore crypt.h and the target link interface for AccountsService.
+            autotools libxcrypt --disable-werror
+            for accounts_dep in glib polkit elogind; do
+                if [[ -f "$BUILD/$accounts_dep/build.ninja" ]]; then
+                    DESTDIR="$ROOT" meson install -C "$BUILD/$accounts_dep" --no-rebuild
+                elif [[ -f "$BUILD/$accounts_dep/Makefile" ]]; then
+                    make -C "$BUILD/$accounts_dep" DESTDIR="$ROOT" install-data
+                fi
+            done
+            # Host gettext may lack PolicyKit's XML ITS rules; install the
+            # English policy template directly, matching this X11 live image.
+            sed -i "/^i18n.merge_file(/,/^)/ { s/^i18n.merge_file(/configure_file(/; s/^  po_dir: po_dir,/  copy: true,/; }" \
+                "$accounts_source/data/meson.build"
+            desktop_meson accountsservice -Delogind=true -Dvapi=false \
+                -Dintrospection=true -Dgtk_doc=false -Ddocbook=false \
+                -Dsystemdsystemunitdir=/usr/lib/systemd/system ;;
+        bzip2)
+            source=$(unpack bzip2)
+            local bzip2_cflags='-O2 -fPIC -D_FILE_OFFSET_BITS=64'
+            make -C "$source" clean
+            make -C "$source" -j"$JOBS" CC="$CC" AR="$AR" RANLIB="$RANLIB" CFLAGS="$bzip2_cflags"
+            make -C "$source" CC="$CC" AR="$AR" RANLIB="$RANLIB" CFLAGS="$bzip2_cflags" PREFIX="$ROOT/usr" install
+            make -C "$source" -B -f Makefile-libbz2_so CC="$CC" CFLAGS="$bzip2_cflags"
+            install -m0755 "$source/libbz2.so.1.0.8" "$ROOT/usr/lib/"
+            ln -snf libbz2.so.1.0.8 "$ROOT/usr/lib/libbz2.so.1.0"
+            ln -snf libbz2.so.1.0 "$ROOT/usr/lib/libbz2.so" ;;
+        zstd)
+            source=$(unpack zstd)
+            local zstd_cflags="${CFLAGS:-} -fPIC -isystem $SDK/sysroot/usr/include"
+            make -C "$source" clean
+            make -C "$source" -j"$JOBS" CC="$CC" CXX="$CXX" AR="$AR" RANLIB="$RANLIB" CFLAGS="$zstd_cflags"
+            make -C "$source" CC="$CC" AR="$AR" RANLIB="$RANLIB" CFLAGS="$zstd_cflags" PREFIX=/usr DESTDIR="$ROOT" install ;;
+        mozjs-115)
+            source=$(unpack mozjs-115)
+            local mozjs_src="$source/js/src" mozjs_build="$BUILD/mozjs-115"
+            [[ -x "$mozjs_src/configure" ]] || die 'mozjs-115 source archive has no generated js/src/configure script'
+            mkdir -p "$mozjs_build"
+            (cd "$mozjs_build"
+             export M4=$(command -v m4) AWK=$(command -v awk)
+             # Mozilla's configure requires LLVM_OBJDUMP even for this
+             # non-LLVM target build; GNU objdump is sufficient for its
+             # configure-time tool lookup and the actual build.
+             export LLVM_OBJDUMP=$(command -v objdump)
+             export AC_MACRODIR="$source/build/autoconf"
+             export CPPFLAGS="${CPPFLAGS:-} -I$ROOT/usr/include -I$SDK/sysroot/usr/include"
+             export LDFLAGS="${LDFLAGS:-} -L$ROOT/usr/lib -Wl,-rpath-link,$ROOT/usr/lib"
+             "$mozjs_src/configure" --host="$TARGET" --target="$TARGET" \
+                 --prefix=/usr --libdir=/usr/lib --disable-jemalloc --disable-tests \
+                 --disable-debug --enable-release --enable-shared-js \
+                 --with-system-zlib --with-intl-api --disable-strip \
+                 --disable-optimize --disable-ctypes)
+            make -C "$mozjs_build" DEVELOPER_OPTIONS=1 -j"$JOBS"
+            make -C "$mozjs_build" DEVELOPER_OPTIONS=1 DESTDIR="$ROOT" install
+            # The public development API is versioned as mozjs-115.
+            [[ -e "$ROOT/usr/lib/libmozjs-115.so" ]] ||
+                die 'mozjs-115 build did not install libmozjs-115.so'
+            ;;
+        cjs)
+            # Cairo's Xlib backend includes X11 public headers. The build
+            # profile removes development files from rootfs between stages,
+            # so restore the already-built Cairo/X11 dependency headers here.
+            local cjs_dep
+            for cjs_dep in cairo xorgproto xtrans libXau libXdmcp libxcb libX11 libXext \
+                           libXrender libXfixes libXi libXrandr libXcursor libXinerama \
+                           libXcomposite libXdamage libXtst pixman; do
+                if [[ -f "$BUILD/$cjs_dep/build.ninja" ]]; then
+                    DESTDIR="$ROOT" meson install -C "$BUILD/$cjs_dep" --no-rebuild
+                elif [[ -f "$BUILD/$cjs_dep/Makefile" ]]; then
+                    make -C "$BUILD/$cjs_dep" DESTDIR="$ROOT" install-data
+                fi
+            done
+            # Earlier completed stages may have removed development headers
+            # from the runtime rootfs. Restore libffi's generated public API
+            # before configuring CJS, which includes ffi.h directly.
+            [[ ! -f "$BUILD/libffi/Makefile" ]] || make -C "$BUILD/libffi" DESTDIR="$ROOT" install
+            # SpiderMonkey's public JS headers are generated in its dist tree;
+            # restore them because the CJS API includes js/*.h at compile time.
+            [[ ! -f "$BUILD/mozjs-115/Makefile" ]] || \
+                make -C "$BUILD/mozjs-115" DEVELOPER_OPTIONS=1 DESTDIR="$ROOT" install
+            [[ ! -f "$BUILD/glib/build.ninja" ]] || DESTDIR="$ROOT" meson install -C "$BUILD/glib" --no-rebuild
+            [[ ! -f "$BUILD/cairo/build.ninja" ]] || DESTDIR="$ROOT" meson install -C "$BUILD/cairo" --no-rebuild
+            # The legacy GI 1.78 scanner shipped into ROOT uses distutils,
+            # removed from the host's Python 3.13. Meson resolves the scanner
+            # to this absolute target path, so dispatch it to the host scanner
+            # while retaining the target GIR search path and cross dumper.
+            [[ -x /usr/bin/g-ir-scanner ]] || die 'CJS introspection requires host g-ir-scanner'
+            printf '#!/bin/sh\nunset LD_LIBRARY_PATH PYTHONPATH UNINSTALLED_GLIB_SRCDIR\nexport GI_GIR_PATH="%s/usr/share/gir-1.0${GI_GIR_PATH:+:$GI_GIR_PATH}"\nexec /usr/bin/g-ir-scanner --add-include-path="%s/usr/share/gir-1.0" --lib-dirs-envvar=GI_CROSS_LIBRARY_PATH --use-ldd-wrapper="%s/desktop-host/target-ldd" "$@"\n' \
+                "$ROOT" "$ROOT" "$BUILD" > "$ROOT/usr/bin/g-ir-scanner"
+            chmod 0755 "$ROOT/usr/bin/g-ir-scanner"
+            source=$(unpack cjs)
+            # CJS runs a configure-time target executable probe. It is invalid
+            # in a cross build; the ABI is checked by its subsequent link step.
+            python3 - "$source/meson.build" <<'PY_CJS_CROSS_PROBE'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+s = p.read_text()
+start = s.find('# Check if a minimal SpiderMonkey program compiles')
+if start >= 0:
+    end = s.find('\nendif', start)
+    if end < 0:
+        raise SystemExit('CJS SpiderMonkey probe has no matching endif')
+    p.write_text(s[:start] + s[end + len('\nendif'):])
+PY_CJS_CROSS_PROBE
+            # CJS 6.x builds its optional installed-test binaries even when
+            # -Dinstalled_tests=false, and those tests require GI's private
+            # test fixtures in the target sysroot. Honor the option at the
+            # subdirectory boundary; no runtime CJS component lives there.
+            python3 - "$source/meson.build" <<'PY_CJS_INSTALLED_TESTS'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = "subdir('installed-tests')"
+new = "if get_option('installed_tests')\n    subdir('installed-tests')\nendif"
+if old in s:
+    s = s.replace(old, new, 1)
+elif new not in s:
+    raise SystemExit('CJS installed-tests subdir declaration not found')
+old_test = "if host_machine.system() != 'windows'\n    subdir('test')\nendif"
+new_test = "if get_option('installed_tests') and host_machine.system() != 'windows'\n    subdir('test')\nendif"
+if old_test in s:
+    s = s.replace(old_test, new_test, 1)
+elif new_test not in s:
+    raise SystemExit('CJS unit-test subdir declaration not found')
+p.write_text(s)
+PY_CJS_INSTALLED_TESTS
+            desktop_meson cjs -Dprofiler=disabled -Dinstalled_tests=false -Dcairo=enabled ;;
+        gobject-introspection-legacy)
+            source=$(unpack gobject-introspection-legacy)
+            # CJS 6.4 still uses GIRepository 1.0, removed in GI 1.80.
+            # Keep the newer scanner for GLib's GIR generation, then install
+            # this ABI-compatible library and headers immediately before CJS.
+            local gi_legacy_python_include
+            gi_legacy_python_include=$(python3 -c 'import os, sysconfig; print(os.path.dirname(sysconfig.get_path("include")))')
+            python3 - "$source/meson.build" "$gi_legacy_python_include" <<'PY_GI_LEGACY_PYTHON'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = "# python headers\ncc.check_header('Python.h', dependencies: [python.dependency()], required: true)"
+new = "# python headers\ncc.check_header('Python.h', dependencies: [python.dependency()], args: ['-I" + sys.argv[2] + "'], required: true)"
+if old in s:
+    s = s.replace(old, new, 1)
+elif new not in s:
+    raise SystemExit('Legacy GI Python.h check pattern was not found')
+p.write_text(s)
+PY_GI_LEGACY_PYTHON
+            desktop_meson gobject-introspection-legacy \
+                -Dbuild_introspection_data=false -Ddoctool=disabled \
+                -Dgtk_doc=false -Dcairo=disabled \
+                "-Dc_args=-I$gi_legacy_python_include" ;;
+        libgpg-error) autotools libgpg-error --disable-static --disable-doc ;;
+        libgcrypt)
+            # libgcrypt 1.12 prefers gpgrt-config; find the target copy instead
+            # of probing the host and mis-detecting its version/ABI.
+            GPGRT_CONFIG="$ROOT/usr/bin/gpgrt-config" autotools libgcrypt \
+                --disable-static --disable-doc --with-libgpg-error-prefix="$ROOT/usr" ;;
+        p11-kit) desktop_meson p11-kit -Dtest=false -Dgtk_doc=false -Dsystemd=disabled -Dbash_completion=disabled -Dnls=false -Dtrust_module=enabled ;;
+        gcr)
+            source=$(unpack gcr)
+            # Keep Gck/Gcr GIR files needed by Cinnamon, but omit optional Vala
+            # bindings so this cross build does not require host vapigen.
+            python3 - "$source/gck/meson.build" "$source/gcr/meson.build" "$source/ui/meson.build" <<'PY_GCR_SKIP_VAPI'
+from pathlib import Path
+import sys
+
+def remove_vapi_block(path, marker):
+    p = Path(path)
+    s = p.read_text()
+    start = s.find(marker)
+    if start < 0:
+        return
+    end = s.find('endif', start)
+    if end < 0:
+        raise SystemExit(f'GCR VAPI block end not found in {p}')
+    p.write_text(s[:start] + s[end:])
+
+remove_vapi_block(sys.argv[1], '  gck_vapi = gnome.generate_vapi(')
+remove_vapi_block(sys.argv[2], '  gcr_vapi = gnome.generate_vapi(')
+remove_vapi_block(sys.argv[3], '  gcr_ui_vapi = gnome.generate_vapi(')
+PY_GCR_SKIP_VAPI
+            desktop_meson gcr -Dgtk=true -Dgtk_doc=false -Dintrospection=true -Dssh_agent=true -Dsystemd=disabled ;;
+        libtasn1) autotools libtasn1 --disable-static ;;
+        libwacom) desktop_meson libwacom -Ddocumentation=disabled -Dtests=disabled ;;
+        libgnomekbd) desktop_meson libgnomekbd -Dintrospection=false -Dvapi=false -Dtests=false ;; 
+        libxkbcommon)
+            # Restore XCB development headers removed during rootfs pruning.
+            # xcb-proto's pinned Python generator emits the protocol headers
+            # from the matching XML; the X11 backend needs xkb.h and xproto.h.
+            local xcb_proto_source libxcb_source xcb_gen_dir xcb_header_name
+            xcb_proto_source=$(unpack xcb-proto)
+            libxcb_source=$(unpack libxcb)
+            xcb_gen_dir=$(mktemp -d "$BUILD/.libxkbcommon-xcbgen.XXXXXX")
+            mkdir -p "$ROOT/usr/include/xcb"
+            install -m0644 "$libxcb_source/src/xcb.h" "$libxcb_source/src/xcbext.h" \
+                "$libxcb_source/src/xcb_windefs.h" "$ROOT/usr/include/xcb/"
+            for xcb_header_name in xproto xkb; do
+                (cd "$xcb_gen_dir" && PYTHONPATH="$xcb_proto_source" \
+                    python3 "$libxcb_source/src/c_client.py" -c "libxcb ${VERSION[libxcb]}" \
+                    -l 3 -s 3 -p "$xcb_proto_source/src" \
+                    "$xcb_proto_source/src/$xcb_header_name.xml")
+                install -m0644 "$xcb_gen_dir/$xcb_header_name.h" "$ROOT/usr/include/xcb/$xcb_header_name.h"
+            done
+            rm -rf -- "$xcb_gen_dir"
+            desktop_meson libxkbcommon -Denable-x11=true -Denable-wayland=false \
+                -Denable-docs=false -Denable-xkbregistry=false -Db_ndebug=false \
+                -Dxkb-config-root=/usr/share/X11/xkb \
+                -Dxkb-config-unversioned-extensions-path=/usr/share/xkeyboard-config.d \
+                -Dxkb-config-versioned-extensions-path=/usr/share/xkeyboard-config-2.d ;;
+        gsettings-desktop-schemas) desktop_meson gsettings-desktop-schemas -Dintrospection=false ;;
+        json-glib) desktop_meson json-glib -Dtests=false -Dinstalled_tests=false -Dintrospection=enabled -Dman=false ;;
+        graphene) desktop_meson graphene -Dtests=false -Dgtk_doc=false -Dintrospection=enabled ;;
+        # realloc(NULL, n) is defined by C; seed this target-only Autoconf cache
+        # result so configure never tries to execute an ARM/target test binary.
+        startup-notification) lf_cv_sane_realloc=yes autotools startup-notification --disable-static --disable-specs ;;
+        cogl)
+            source=$(unpack cogl)
+            # Cogl 1.22 repeats a Deprecated annotation on cogl_program_ref;
+            # newer g-ir-scanner rejects the duplicate while generating GIR.
+            sed -i '/Deprecated: 1.0: Please use cogl_object_ref() instead\./d' \
+                "$source/cogl/deprecated/cogl-shader.h"
+            python3 - "$source/cogl-path/cogl-path.c" <<'PY_COGL_GLU_CALLBACKS'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+for callback in (
+    '_cogl_path_tesselator_begin',
+    '_cogl_path_tesselator_vertex',
+    '_cogl_path_tesselator_end',
+    '_cogl_path_tesselator_combine',
+):
+    s = s.replace('                   ' + callback + ');',
+                  '                   (_GLUfuncptr *) ' + callback + ');')
+    s = s.replace('(_GLUfuncptr) ' + callback + ');',
+                  '(_GLUfuncptr *) ' + callback + ');')
+p.write_text(s)
+PY_COGL_GLU_CALLBACKS
+            (cd "$source"; autoreconf -fi)
+            autotools cogl --disable-static --disable-gtk-doc --enable-cairo=yes \
+                --enable-cogl-pango=yes --enable-gdk-pixbuf=yes --disable-wayland-egl-platform ;;
+        clutter)
+            source=$(unpack clutter)
+            (cd "$source"; autoreconf -fi)
+            autotools clutter --disable-static --disable-gtk-doc --enable-evdev \
+                --enable-evdev-input --disable-wayland-backend --disable-wayland-compositor \
+                --disable-egl-backend --enable-gdk-backend ;;
+        libdbusmenu)
+            source=$(unpack libdbusmenu)
+            # This legacy Autotools project bundles no generated configure
+            # script and assumes gtk-doc tooling is present. Build its GLib
+            # and GTK3 runtime libraries without docs, tests, GTK2 tools,
+            # introspection, or Vala bindings.
+            python3 - "$source/configure.ac" "$source/Makefile.am" "$source/libdbusmenu-glib/Makefile.am" "$source/tools/clean-dbusmenu-xml.py" <<'PY_DBUSMENU_MINIMAL_BUILD'
+from pathlib import Path
+import sys
+configure = Path(sys.argv[1])
+s = configure.read_text().replace('GTK_DOC_CHECK([1.14],[--flavour no-tmpl])\n', '')
+s = s.replace('AM_CONDITIONAL([HAVE_VALGRIND], [test \"x$have_valgrind\" = \"xyes\"])\n', '')
+s = s.replace('# GObject Introspection\n', '# GObject Introspection\nAM_CONDITIONAL([HAVE_VALGRIND], [false])\n')
+s = ''.join(line for line in s.splitlines(keepends=True) if not line.startswith(('docs/', 'tests/')))
+configure.write_text(s)
+makefile = Path(sys.argv[2])
+s = makefile.read_text()
+s = s.replace('if WANT_TESTS\nTESTS_SUBDIR = tests\nendif\n\n', '')
+s = s.replace(chr(9) + '$(TESTS_SUBDIR) ' + chr(92) + chr(10), '')
+s = s.replace(chr(9) + 'docs ' + chr(92) + chr(10), '')
+makefile.write_text(s)
+
+# Upstream unconditionally expects xsltproc just to strip its documentation
+# namespace from the embedded DBus introspection XML. Use Python's stdlib XML
+# parser so this optional host tool is not needed for the target build.
+glib_makefile = Path(sys.argv[3])
+s = glib_makefile.read_text()
+s = s.replace('$(XSLT_PROC) $(srcdir)/clean-namespaces.xslt $< > $@',
+              'python3 $(srcdir)/../tools/clean-dbusmenu-xml.py $< > $@')
+glib_makefile.write_text(s)
+xml_helper = Path(sys.argv[4])
+xml_helper.write_text('''#!/usr/bin/env python3
+import sys
+import xml.etree.ElementTree as ET
+
+DOX = "{http://www.canonical.com/dbus/dox.dtd}"
+root = ET.parse(sys.argv[1]).getroot()
+def clean(node):
+    for child in list(node):
+        if child.tag.startswith(DOX):
+            node.remove(child)
+        else:
+            clean(child)
+            if isinstance(child.tag, str) and child.tag.startswith("{"):
+                child.tag = child.tag.split("}", 1)[1]
+clean(root)
+if root.tag.startswith("{"):
+    root.tag = root.tag.split("}", 1)[1]
+ET.ElementTree(root).write(sys.stdout.buffer, encoding="utf-8", xml_declaration=True)
+''')
+PY_DBUSMENU_MINIMAL_BUILD
+            (cd "$source" && autoreconf -fi)
+            autotools libdbusmenu --enable-gtk --with-gtk=3 --disable-dumper \
+                --disable-tests --disable-introspection --disable-vala --disable-gtk-doc ;;
+        python3-xapp)
+            # Cinnamon Settings and its applet/desklet pages import these
+            # upstream Python widgets; libxapp alone only provides the C/GI API.
+            desktop_meson python3-xapp ;;
+        xapp-symbolic-icons)
+            # Cinnamon's native network and sound applets request xsi-* names.
+            # Install the upstream icon set and its migration helper as a normal
+            # Meson package, pinned to a fixed upstream commit and checksum.
+            # Cinnamon looks up panel indicators in the status context; upstream
+            # installs the complete set in actions, so expose device state icons
+            # in status as well for Gtk/St icon-theme lookups.
+            source=$(unpack xapp-symbolic-icons)
+            desktop_meson xapp-symbolic-icons
+            local icon status_icon_dir="$ROOT/usr/share/icons/hicolor/scalable/status"
+            mkdir -p "$status_icon_dir"
+            for icon in "$source"/icons/symbolic/xsi-network-*.svg \
+                        "$source"/icons/symbolic/xsi-audio-*.svg \
+                        "$source"/icons/symbolic/xsi-microphone-*.svg; do
+                [[ -f "$icon" ]] || continue
+                install -m0644 "$icon" "$status_icon_dir/${icon##*/}"
+            done ;;
+        xapps)
+            # A completed image cleanup may have removed development headers
+            # after their stage stamps. Reinstall XApp's GTK/Pango/Cairo/X11
+            # dependency chain from the existing Meson build trees.
+            local dep
+            for dep in glib cairo harfbuzz fribidi pango gdk-pixbuf at-spi2-core gtk \
+                       pixman xorgproto xtrans libXau libXdmcp libxcb libX11 libXext libXrender \
+                       libXfixes libXi libXrandr libXcursor libXinerama libXcomposite libXdamage libXtst \
+                       libxklavier libgnomekbd libdbusmenu; do
+                if [[ -f "$BUILD/$dep/build.ninja" ]]; then
+                    DESTDIR="$ROOT" meson install -C "$BUILD/$dep" --no-rebuild
+                elif [[ -f "$BUILD/$dep/Makefile" ]]; then
+                    make -C "$BUILD/$dep" DESTDIR="$ROOT" install-data
+                fi
+            done
+            desktop_host_tools
+            source=$(unpack xapps)
+            python3 - "$source/meson.build" <<'PY_XAPPS_NO_PYGOBJECT'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+block = "if get_option('introspection')\n    subdir('pygobject')\nendif\n"
+if block not in s:
+    if "subdir('pygobject')" in s:
+        raise SystemExit('Unexpected XApps PyGObject block; refusing to patch')
+else:
+    p.write_text(s.replace(block, '', 1))
+PY_XAPPS_NO_PYGOBJECT
+            desktop_meson xapps -Dintrospection=true -Dvapi=false ;;
+        cinnamon-settings-daemon)
+            # Keep the settings daemon usable without introducing a full CUPS
+            # server/client stack just for optional print notifications.
+            desktop_meson cinnamon-settings-daemon -Duse_cups=disabled -Duse_smartcard=disabled ;;
+        cinnamon-control-center)
+            # Cinnamon Settings advertises a Network page even on lean systems
+            # that do not install its optional CCC plugin module. Open the
+            # installed NetworkManager connection editor directly instead.
+            local ccc_source ccc_network_desktop
+            ccc_source=$(unpack cinnamon-control-center)
+            ccc_network_desktop="$ccc_source/panels/network/cinnamon-network-panel.desktop"
+            python3 - "$ccc_network_desktop" <<'PY_CINNAMON_NETWORK_PANEL_LAUNCHER'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = 'Exec=cinnamon-settings network\n'
+new = 'Exec=nm-connection-editor\n'
+if old in s:
+    s = s.replace(old, new, 1)
+elif new not in s:
+    raise SystemExit('Cinnamon network panel launcher was not found')
+p.write_text(s)
+PY_CINNAMON_NETWORK_PANEL_LAUNCHER
+            desktop_meson cinnamon-control-center -Dmodemmanager=false -Donlineaccounts=false ;;
+        libgsf)
+            autotools libgsf --disable-introspection --disable-gtk-doc --without-gdk-pixbuf ;;
+        nemo)
+            # EXIF/XMP metadata readers are optional image metadata features;
+            # keep the file manager core independent of two extra libraries.
+            desktop_meson nemo -Dexif=false -Dxmp=false ;;
+        cinnamon-menu-editor)
+            # This Python application is bundled inside Cinnamon's release
+            # archive; install it in an explicit post-Cinnamon stage.
+            local menu_editor_source
+            source=$(unpack cinnamon)
+            menu_editor_source="$source/files/usr"
+            [[ -f "$menu_editor_source/bin/cinnamon-menu-editor" && \
+               -f "$menu_editor_source/share/applications/cinnamon-menu-editor.desktop" && \
+               -d "$menu_editor_source/share/cinnamon/cinnamon-menu-editor" ]] ||
+                die 'Cinnamon source archive is missing cinnamon-menu-editor files'
+            install -Dm0755 "$menu_editor_source/bin/cinnamon-menu-editor" \
+                "$ROOT/usr/bin/cinnamon-menu-editor"
+            # Process-title decoration is optional and not needed for editor
+            # functionality; avoid a separate Python package dependency.
+            python3 - "$ROOT/usr/bin/cinnamon-menu-editor" <<'PY_MENU_EDITOR_OPTIONAL_SETPROCTITLE'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+s = s.replace('from setproctitle import setproctitle\n', '')
+s = s.replace('    setproctitle("cinnamon-menu-editor")\n', '')
+if 'from setproctitle import setproctitle' in s or 'setproctitle("cinnamon-menu-editor")' in s:
+    raise SystemExit('Could not remove optional setproctitle import cleanly')
+p.write_text(s)
+PY_MENU_EDITOR_OPTIONAL_SETPROCTITLE
+            install -Dm0644 \
+                "$menu_editor_source/share/applications/cinnamon-menu-editor.desktop" \
+                "$ROOT/usr/share/applications/cinnamon-menu-editor.desktop"
+            mkdir -p "$ROOT/usr/share/cinnamon/cinnamon-menu-editor"
+            cp -a "$menu_editor_source/share/cinnamon/cinnamon-menu-editor/." \
+                "$ROOT/usr/share/cinnamon/cinnamon-menu-editor/"
+            if [[ -f "$source/man/cinnamon-menu-editor.1" ]]; then
+                install -Dm0644 "$source/man/cinnamon-menu-editor.1" \
+                    "$ROOT/usr/share/man/man1/cinnamon-menu-editor.1"
+            fi
+            [[ -x "$ROOT/usr/bin/cinnamon-menu-editor" && \
+               -x "$ROOT/usr/bin/python3" && \
+               -f "$ROOT/usr/lib/python3/dist-packages/gi/__init__.py" && \
+               -f "$ROOT/usr/lib/python3/dist-packages/cairo/__init__.py" && \
+               -f "$ROOT/usr/lib/girepository-1.0/CMenu-3.0.typelib" && \
+               -f "$ROOT/usr/lib/girepository-1.0/Gtk-3.0.typelib" && \
+               -f "$ROOT/usr/share/cinnamon/cinnamon-menu-editor/cme/MainWindow.py" ]] ||
+                die 'Cinnamon menu editor was not installed into the target rootfs' ;;
+        cinnamon-translations)
+            # Upstream ships pre-exported PO files and a Makefile, not Meson.
+            source=$(unpack cinnamon-translations)
+            (cd "$source" && make buildmo)
+            mkdir -p "$ROOT/usr/share/locale"
+            cp -a "$source/usr/share/locale/." "$ROOT/usr/share/locale/" ;;
+        cinnamon-desktop)
+            local cinnamon_desktop_dep cinnamon_desktop_host_pkg_config cinnamon_desktop_kmod_source cinnamon_desktop_x11_source
+            # Restore pruned development headers and pkg-config data needed for
+            # this patched rebuild of libcinnamon-desktop.
+            # eudev's runtime package pruning also removes libudev.h; rebuild
+            # its development interface before compiling cinnamon-desktop.
+            cinnamon_desktop_host_pkg_config=$(command -v pkg-config) ||
+                die "cinnamon-desktop requires host pkg-config"
+            cinnamon_desktop_kmod_source=$(unpack kmod)
+            (export CPPFLAGS="${CPPFLAGS:-} -I$SDK/sysroot/usr/include -I$cinnamon_desktop_kmod_source/libkmod"
+             export PKG_CONFIG="$cinnamon_desktop_host_pkg_config"
+             autotools eudev --disable-static --disable-introspection --disable-manpages \
+                 --disable-selinux --enable-kmod --disable-blkid --enable-hwdb=no \
+                 --with-rootprefix=/usr --with-rootrundir=/run)
+            # at-spi2-core 2.56.4 provides ATK 2.56.4 itself. Do not let the
+            # older standalone ATK 2.38 recipe overwrite its libatk ABI.
+            if [[ -f "$BUILD/at-spi2-core/build.ninja" ]]; then
+                DESTDIR="$ROOT" meson install -C "$BUILD/at-spi2-core" --no-rebuild
+            fi
+            if [[ -f "$BUILD/xorgproto/build.ninja" ]]; then
+                DESTDIR="$ROOT" meson install -C "$BUILD/xorgproto" --no-rebuild --tags devel
+            else
+                desktop_meson xorgproto
+            fi
+            for cinnamon_desktop_dep in glib cairo harfbuzz fribidi pango gdk-pixbuf gtk pulseaudio; do
+                if [[ -f "$BUILD/$cinnamon_desktop_dep/build.ninja" ]]; then
+                    DESTDIR="$ROOT" meson install -C "$BUILD/$cinnamon_desktop_dep" \
+                        --no-rebuild --tags devel
+                fi
+            done
+            if [[ ! -f "$BUILD/pango/build.ninja" ]]; then
+                desktop_meson pango -Dfontconfig=enabled -Dfreetype=enabled -Dcairo=enabled \
+                    -Dintrospection=enabled -Ddocumentation=false \
+                    -Dbuild-testsuite=false -Dbuild-examples=false
+            fi
+            for cinnamon_desktop_dep in libXrandr libxkbfile; do
+                if [[ -f "$BUILD/$cinnamon_desktop_dep/Makefile" ]]; then
+                    make -C "$BUILD/$cinnamon_desktop_dep" DESTDIR="$ROOT" install-data
+                fi
+            done
+            # Image cleanup removes development headers after their stages.
+            # Cinnamon Desktop still includes GTK's public GDK-X11 header,
+            # which requires Xlib.h. Restore libX11 headers from the pinned
+            # source and its generated configuration header, without
+            # rebuilding libX11 (which would need the whole libxcb dev tree).
+            cinnamon_desktop_x11_source=$(unpack libX11)
+            mkdir -p "$ROOT/usr/include/X11"
+            cp -a "$cinnamon_desktop_x11_source/include/X11/." "$ROOT/usr/include/X11/"
+            if [[ -s "$BUILD/libX11/include/X11/XlibConf.h" ]]; then
+                install -m0644 "$BUILD/libX11/include/X11/XlibConf.h" "$ROOT/usr/include/X11/XlibConf.h"
+            fi
+            [[ -s "$ROOT/usr/include/X11/Xlib.h" && -s "$ROOT/usr/include/X11/XlibConf.h" ]] ||
+                die 'Could not restore Xlib development headers for cinnamon-desktop'
+            source=$(unpack cinnamon-desktop)
+            # pkg-config applies the cross sysroot to both xkb_base and the
+            # iso-codes prefix, embedding the host build-root path in
+            # libcinnamon-desktop. These values are runtime paths, so strip
+            # the sysroot while retaining the target's /usr prefix.
+            python3 - "$source/meson.build" <<'PY_CINNAMON_XKB_BASE'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+changes = {
+    "xkb_base = xkbconf.get_variable(pkgconfig: 'xkb_base')":
+        "xkb_base = '/usr/share/X11/xkb'",
+    "iso_codes_prefix = iso_codes.get_variable(pkgconfig: 'prefix')":
+        "iso_codes_prefix = '/usr'",
+}
+for old, new in changes.items():
+    if old in s:
+        s = s.replace(old, new, 1)
+    elif new not in s:
+        raise SystemExit(f'Cinnamon Desktop runtime path declaration not found: {old}')
+p.write_text(s)
+PY_CINNAMON_XKB_BASE
+            # GI has no introspectable time_t alias, so its compiler rejects
+            # the thumbnail API's raw time_t parameters. Desktop profiles are
+            # x86_64-only; there time_t and gint64 have the same 64-bit ABI.
+            # Expose the equivalent GLib integer type in this public header so
+            # the generated GIR and the C declarations agree on the ABI.
+            python3 - "$source/libcinnamon-desktop/gnome-desktop-thumbnail.h" <<'PY_CINNAMON_TIME_T_GIR'
+from pathlib import Path
+import re
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+if 'time_t' in s:
+    s, count = re.subn(r'\btime_t\b', 'gint64', s)
+    if count < 1:
+        raise SystemExit('Cinnamon thumbnail header time_t declarations were not patched')
+elif 'gint64' not in s:
+    raise SystemExit('Cinnamon thumbnail header has neither time_t nor gint64 declarations')
+p.write_text(s)
+PY_CINNAMON_TIME_T_GIR
+            # Ensure Meson regenerates config.h so compiled-in ISO paths do
+            # not retain PKG_CONFIG_SYSROOT_DIR from the cross build.
+            rm -rf "$BUILD/cinnamon-desktop"
+            desktop_meson cinnamon-desktop ;;
+        cinnamon-menus|cinnamon-session) desktop_meson "$name" ;;
+        muffin)
+            # Cinnamon's compositor is built for the Xorg session only. The
+            # XKB rules path is runtime data; pkg-config's cross sysroot would
+            # otherwise bake this host's build-root path into Muffin.
+            source=$(unpack muffin)
+            python3 - "$source/meson.build" <<'PY_MUFFIN_XKB_BASE'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = "xkb_base = xkeyboard_config_dep.get_variable(pkgconfig: 'xkb_base')"
+new = "xkb_base = '/usr/share/X11/xkb'"
+if old in s:
+    s = s.replace(old, new, 1)
+elif new not in s:
+    raise SystemExit('Could not locate Muffin XKB base configuration')
+p.write_text(s)
+PY_MUFFIN_XKB_BASE
+            # Bound Muffin Clutter's GLX swap wait. Some software GLX stacks
+            # omit BufferSwapComplete; without this watchdog Clutter can sleep
+            # forever and stop painting the Cinnamon stage.
+            python3 - "$source/clutter/clutter/cogl/clutter-stage-cogl.h" \
+                "$source/clutter/clutter/cogl/clutter-stage-cogl.c" <<'PY_MUFFIN_SWAP_WATCHDOG'
+from pathlib import Path
+import sys
+
+header, implementation = map(Path, sys.argv[1:])
+h = header.read_text()
+old = '''  int pending_swaps;
+
+  gint64 last_presentation_time;'''
+new = '''  int pending_swaps;
+  guint pending_swaps_timeout_id;
+  gboolean swap_events_lost;
+
+  gint64 last_presentation_time;'''
+if old in h:
+    h = h.replace(old, new, 1)
+elif 'pending_swaps_timeout_id' not in h or 'swap_events_lost' not in h:
+    raise SystemExit('Could not add Clutter pending-swap watchdog state')
+header.write_text(h)
+
+s = implementation.read_text()
+marker = '''static void
+clutter_stage_cogl_unrealize (ClutterStageWindow *stage_window)
+'''
+callback = '''static gboolean
+clutter_stage_cogl_pending_swaps_timeout (gpointer user_data)
+{
+  ClutterStageCogl *stage_cogl = CLUTTER_STAGE_COGL (user_data);
+
+  stage_cogl->pending_swaps_timeout_id = 0;
+  if (stage_cogl->pending_swaps > 0)
+    {
+      g_warning ("Timed out waiting for a GLX swap completion event; "
+                 "continuing with damage-driven redraws");
+      stage_cogl->pending_swaps = 0;
+      stage_cogl->swap_events_lost = TRUE;
+      clutter_stage_schedule_update (stage_cogl->wrapper);
+    }
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+clutter_stage_cogl_unrealize (ClutterStageWindow *stage_window)
+'''
+import re
+callback_pattern = re.compile(
+    r'static gboolean\nclutter_stage_cogl_pending_swaps_timeout \(gpointer user_data\)\n\{.*?\n\}\n\n',
+    re.S,
+)
+callback_matches = list(callback_pattern.finditer(s))
+if len(callback_matches) > 1:
+    s = callback_pattern.sub('', s)
+    callback_matches = []
+if not callback_matches:
+    if marker not in s:
+        raise SystemExit('Could not add Clutter pending-swap watchdog callback')
+    s = s.replace(marker, callback, 1)
+
+old = '''clutter_stage_cogl_unrealize (ClutterStageWindow *stage_window)
+{
+  CLUTTER_NOTE (BACKEND, "Unrealizing Cogl stage [%p]", stage_window);
+}'''
+new = '''clutter_stage_cogl_unrealize (ClutterStageWindow *stage_window)
+{
+  ClutterStageCogl *stage_cogl = CLUTTER_STAGE_COGL (stage_window);
+
+  if (stage_cogl->pending_swaps_timeout_id)
+    {
+      g_source_remove (stage_cogl->pending_swaps_timeout_id);
+      stage_cogl->pending_swaps_timeout_id = 0;
+    }
+
+  CLUTTER_NOTE (BACKEND, "Unrealizing Cogl stage [%p]", stage_window);
+}'''
+if old in s:
+    s = s.replace(old, new, 1)
+
+old = '''      if (stage_cogl->pending_swaps > 0)
+        stage_cogl->pending_swaps--;
+'''
+new = '''      if (stage_cogl->pending_swaps > 0)
+        stage_cogl->pending_swaps--;
+      if (stage_cogl->pending_swaps == 0 &&
+          stage_cogl->pending_swaps_timeout_id)
+        {
+          g_source_remove (stage_cogl->pending_swaps_timeout_id);
+          stage_cogl->pending_swaps_timeout_id = 0;
+        }
+'''
+if old in s:
+    s = s.replace(old, new, 1)
+elif 'stage_cogl->pending_swaps_timeout_id = 0;' not in s:
+    raise SystemExit('Could not cancel pending-swap watchdog after sync')
+
+old = '''      if (clutter_feature_available (CLUTTER_FEATURE_SWAP_EVENTS))
+        stage_cogl->pending_swaps++;
+'''
+new = '''      if (clutter_feature_available (CLUTTER_FEATURE_SWAP_EVENTS) &&
+          !stage_cogl->swap_events_lost)
+        {
+          stage_cogl->pending_swaps++;
+          if (stage_cogl->pending_swaps_timeout_id == 0)
+            stage_cogl->pending_swaps_timeout_id =
+              g_timeout_add (500, clutter_stage_cogl_pending_swaps_timeout,
+                             stage_cogl);
+        }
+'''
+if old in s:
+    s = s.replace(old, new, 1)
+elif 'g_timeout_add (500, clutter_stage_cogl_pending_swaps_timeout' not in s:
+    raise SystemExit('Could not bound the Clutter pending-swap wait')
+
+implementation.write_text(s)
+PY_MUFFIN_SWAP_WATCHDOG
+            # Mesa changed its GL_VENDOR strings over time. Cogl 2.0.3 only
+            # recognizes older names, classifies softpipe/llvmpipe as unknown
+            # hardware, and Cinnamon then enables compositor effects on a
+            # software renderer (black screen in basic QEMU VGA is one symptom).
+            python3 - "$source/cogl/cogl/cogl-gpu-info.c" <<'PY_MUFFIN_MESA_VENDOR'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = '''  else if (strcmp (strings->vendor_string, "Mesa Project") == 0)
+    return TRUE;
+
+  return FALSE;'''
+new = '''  else if (strcmp (strings->vendor_string, "Mesa Project") == 0)
+    return TRUE;
+  else if (strcmp (strings->vendor_string, "Mesa/X.org") == 0)
+    return TRUE;
+  else if (strcmp (strings->vendor_string, "Mesa") == 0)
+    return TRUE;
+
+  return FALSE;'''
+if old in s:
+    s = s.replace(old, new, 1)
+elif 'strcmp (strings->vendor_string, "Mesa/X.org")' not in s or 'strcmp (strings->vendor_string, "Mesa")' not in s:
+    raise SystemExit('Could not patch Muffin Mesa software-renderer detection')
+p.write_text(s)
+PY_MUFFIN_MESA_VENDOR
+            # Muffin's redundant-decls Werror trips over GCC 16's glibc
+            # headers in the cross sysroot (the declarations are valid aliases).
+            python3 - "$source/meson.build" <<'PY_MUFFIN_GLIBC_HEADERS'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = "    '-Werror=redundant-decls',\n"
+if old in s:
+    s = s.replace(old, '', 1)
+elif old.strip() not in s and 'redundant-decls' in s:
+    raise SystemExit('Unexpected Muffin redundant-decls warning configuration')
+p.write_text(s)
+PY_MUFFIN_GLIBC_HEADERS
+            desktop_restore_meson_development_outputs
+            desktop_meson muffin -Dwayland=false -Dnative_backend=false -Dgles2=false -Dtests=false \
+                -Dintrospection=true -Dprofiler=false -Dremote_desktop=false \
+                -Dlibwacom=false -Dstartup_notification=true ;;
+        cinnamon)
+            local nm_agent=none
+            [[ "$NETWORK" != yes ]] || nm_agent=external
+            source=$(unpack cinnamon)
+            # Cinnamon Settings uses setproctitle only to rename its process;
+            # that optional PyPI module is not part of this toolchain. Keep all
+            # settings pages, including applet Configure, runnable without it.
+            local cinnamon_settings_py="$source/files/usr/share/cinnamon/cinnamon-settings/cinnamon-settings.py"
+            python3 - "$cinnamon_settings_py" <<'PY_CINNAMON_SETTINGS_OPTIONAL_SETPROCTITLE'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+s = s.replace('from setproctitle import setproctitle\n', '')
+s = s.replace('    setproctitle("cinnamon-settings")\n', '')
+if 'from setproctitle import setproctitle' in s or 'setproctitle("cinnamon-settings")' in s:
+    raise SystemExit('Could not remove optional setproctitle use from Cinnamon Settings')
+p.write_text(s)
+PY_CINNAMON_SETTINGS_OPTIONAL_SETPROCTITLE
+            # Mint's embedded Network panel is not usable in this lean image.
+            # Keep the Cinnamon Settings page and menu entry, but open the
+            # installed NetworkManager connection editor when selected.
+            python3 - "$source/files/usr/share/cinnamon/cinnamon-settings/bin/SettingsWidgets.py" <<'PY_CINNAMON_SETTINGS_NETWORK_LAUNCHER'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = """        sidePage = SidePage(label, icon, keywords, content_box, size=-1, is_c_mod=True, is_standalone=False, exec_name=mod_id, module=None)
+"""
+new = """        is_network = mod_id == "network"
+        sidePage = SidePage(
+            label, icon, keywords, content_box, size=-1,
+            is_c_mod=not is_network, is_standalone=is_network,
+            exec_name=("nm-connection-editor" if is_network else mod_id), module=None
+        )
+"""
+if old in s:
+    s = s.replace(old, new, 1)
+elif new not in s:
+    raise SystemExit('Cinnamon CCModule side-page construction did not match')
+old = """    def process (self, c_manager):
+        if c_manager.lookup_c_module(self.name):
+"""
+new = """    def process (self, c_manager):
+        if self.name == "network":
+            return GLib.find_program_in_path("nm-connection-editor") is not None
+        if c_manager.lookup_c_module(self.name):
+"""
+if old in s:
+    s = s.replace(old, new, 1)
+elif new not in s:
+    raise SystemExit('Cinnamon CCModule process method did not match')
+p.write_text(s)
+PY_CINNAMON_SETTINGS_NETWORK_LAUNCHER
+            # The basic VGA software renderer needs a real stage repaint.
+            # Cinnamon upstream skips clearing stage buffers as an optimization;
+            # on softpipe this leaves black/stale pixels over wallpaper/popups.
+            python3 - "$source/js/ui/main.js" <<'PY_CINNAMON_STAGE_CLEAR'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = '    global.stage.no_clear_hint = true;\n'
+new = '    global.stage.no_clear_hint = false;\n'
+if old in s:
+    p.write_text(s.replace(old, new, 1))
+elif new not in s:
+    raise SystemExit('Could not locate Cinnamon stage no-clear optimization')
+PY_CINNAMON_STAGE_CLEAR
+            # Cinnamon 6.6 checks CJS against the SpiderMonkey ABI number,
+            # while CJS's cjs-1.0.pc correctly reports its own release version.
+            # Its Requires.private already pins mozjs-115, so validate the
+            # actual CJS 6.4 API version instead of comparing unlike versions.
+            python3 - "$source/meson.build" <<'PY_CINNAMON_CJS_VERSION'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = "dependency('cjs-1.0', version: '>= 115.0')"
+new = "dependency('cjs-1.0', version: '>= 6.4.0')"
+if old in s:
+    s = s.replace(old, new, 1)
+elif new not in s:
+    raise SystemExit('Cinnamon CJS dependency declaration not found')
+p.write_text(s)
+PY_CINNAMON_CJS_VERSION
+            build_host_sassc
+            desktop_meson cinnamon -Dbuild_recorder=false -Dwayland=false -Dnm_agent="$nm_agent"
+            # Cinnamon's install step also copies its bundled menu-editor
+            # launcher after the dedicated editor stage. Apply the optional
+            # setproctitle removal here as well, after that overwrite.
+            if [[ -f "$ROOT/usr/bin/cinnamon-menu-editor" ]]; then
+                python3 - "$ROOT/usr/bin/cinnamon-menu-editor" <<'PY_CINNAMON_MENU_EDITOR_FINALIZE'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+s = s.replace('from setproctitle import setproctitle\n', '')
+s = s.replace('    setproctitle("cinnamon-menu-editor")\n', '')
+if 'from setproctitle import setproctitle' in s or 'setproctitle("cinnamon-menu-editor")' in s:
+    raise SystemExit('Could not remove optional setproctitle use from installed menu editor')
+p.write_text(s)
+PY_CINNAMON_MENU_EDITOR_FINALIZE
+            fi
+            ;;
         zlib)
             source=$(unpack zlib)
             (cd "$source"; CHOST="$TARGET" ./configure --prefix=/usr --libdir=/usr/lib
@@ -5030,6 +6712,7 @@ PY_LXSESSION_MAKEFILE
         xcb-proto) autotools xcb-proto ;;
         # XCB runtime library only; omit .a archives and developer documentation.
         libxcb) autotools libxcb --disable-static --disable-devel-docs ;;
+        xcb-util) autotools xcb-util --disable-static --disable-devel-docs ;;
         pixman) desktop_meson pixman -Dtests=disabled -Dgtk=disabled ;;
         # PCI device access does not need optional zlib compression.
         libpciaccess) desktop_meson libpciaccess -Dzlib=disabled ;;
@@ -5044,29 +6727,26 @@ PY_LXSESSION_MAKEFILE
             # class; the inputs are read-only and the diagnostics are benign.
             CFLAGS="${CFLAGS:-} -Wno-error=discarded-qualifiers" \
                 autotools elfutils --disable-debuginfod --disable-nls --disable-libdw --disable-libasm ;;
-        # Mesa 26.2 makes Intel iris/crocus require its LLVM based CLC
-        # compiler. This minimal cross toolchain has no native mesa_clc tools,
-        # and building LLVM here would add a much larger dependency chain.
-        # Keep acceleration for AMD, Nouveau and virtual GPUs plus softpipe.
+        # Mesa 26.2 requires its host-built CLC/precompiled shader tools when
+        # Iris or Crocus is enabled in a cross build. desktop_prepare_mesa_tools
+        # builds and installs those native tools before the target Mesa stage.
         mesa)
+            desktop_prepare_mesa_tools
             local -a mesa_flags=(
                 -Dplatforms=x11 # Kurti tik X11 langų sistemos backendą.
                 -Degl-native-platform=x11 # EGL numatytoji platforma yra X11.
-                -Dgallium-drivers=radeonsi,nouveau,svga,virgl,softpipe # AMD/Nouveau/VMware/virtio ir CPU fallback tvarkyklės.
-                -Dvulkan-drivers=[] # Nenaudojami Vulkan tvarkyklių komponentai.
+                -Dgallium-drivers=iris,crocus,radeonsi,nouveau,svga,virgl,softpipe # Intel, AMD, Nouveau, virtualūs GPU ir CPU fallback.
+                -Dvulkan-drivers=[] # Vulkan tvarkyklių komponentai neįtraukiami.
                 -Dglx=dri # GLX susiejamas su Mesa DRI tvarkyklėmis.
                 -Degl=enabled # Įtraukti EGL API (Xorg GL klientams).
                 -Dgbm=enabled # Įtraukti GBM buferių valdymą.
                 -Dglvnd=enabled # Naudoti bendrą GLVND dispatch biblioteką.
-                -Dllvm=disabled # Išjungti LLVM; šiame recepte nėra LLVM CLC grandinės.
-                -Dgallium-va=disabled # Išjungti VA-API Gallium video kodavimą/dekodavimą.
+                -Dllvm=disabled # Target sistemoje LLVM nereikia; CLC įrankiai sukurti hoste.
+                -Dmesa-clc=system # Naudoti iš anksto sukurtą hosto mesa_clc.
+                -Dprecomp-compiler=system # Naudoti hosto Intel shader prekompiliatorius.
+                -Dgallium-va=disabled # Išjungti pasirenkamą VA-API.
                 -Dbuild-tests=false # Nekurti Mesa testų.
                 -Dhtml-docs=disabled # Neįtraukti HTML dokumentacijos.
-                # -Dvulkan-drivers=amd,intel # Pridėti Vulkan tvarkykles; reikia papildomų priklausomybių.
-                # -Dllvm=enabled # Įjungti LLVM paremtus tvarkyklių komponentus.
-                # -Dgallium-va=enabled # Įtraukti VA-API vaizdo spartinimą.
-                # -Dbuild-tests=true # Kurti Mesa testų programas.
-                # -Dhtml-docs=enabled # Kurti Mesa HTML dokumentaciją.
             )
             desktop_meson mesa "${mesa_flags[@]}" ;;
         # udev's 80-drivers.rules invokes the kmod builtin for device modaliases.
@@ -5086,43 +6766,55 @@ PY_LXSESSION_MAKEFILE
         mtdev) autotools mtdev --disable-static ;;
         libevdev) desktop_meson libevdev -Dtests=disabled -Ddocumentation=disabled ;;
         xkeyboard-config) desktop_meson xkeyboard-config ;;
-        xorg-server)
-            local -a xorg_flags=(
-                -Dxorg=true # Kurti pagrindinį Xorg serverį.
-                -Dxvfb=true # Įtraukti virtualų X serverį be fizinio ekrano.
-                -Dxnest=false # Neįtraukti įdėtinio X serverio Xnest.
-                -Dxephyr=false # Neįtraukti kūrėjams skirto Xephyr serverio.
-                -Dpciaccess=true # Aptikti PCI grafikos įrenginius per libpciaccess.
-                -Dsha1=libmd # SHA-1 funkcijai naudoti jau įtrauktą libmd.
-                -Dglamor=true # Įjungti 2D glamor spartinimą per GL.
-                -Dglx=true # Įjungti GLX OpenGL sąsają X11 klientams.
-                -Ddri1=false # Išjungti pasenusį DRI1 protokolą.
-                -Ddri2=true # Palikti DRI2 suderinamumui.
-                -Ddri3=true # Įjungti DRI3 tiesioginį atvaizdavimą.
-                -Dudev=true # Įrenginius aptikti per udev.
-                -Dudev_kms=true # KMS ekrano valdymą susieti su udev įrenginiais.
-                -Dsystemd_logind=false # Xorg sesijų nevaldyti per systemd-logind.
-                -Dsuid_wrapper=true # Paleisti Xorg be root setuid serverio wrapperio.
-                -Dsecure-rpc=false # Išjungti X11 Secure RPC palaikymą.
-                -Dxkb_dir=/usr/share/X11/xkb # Klaviatūrų taisyklių duomenų vieta.
-                -Dxkb_output_dir=/var/lib/xkb # Sugeneruotų XKB duomenų vieta.
-                -Dxkb_bin_dir=/usr/bin # XKB kompiliatoriaus programų vieta.
-                # -Dxwayland=true # Kurti Xwayland serverį; reikia Wayland bibliotekų.
-                # -Dxephyr=true # Įtraukti įdėtinį X serverį testavimui.
-                # -Dxnest=true # Įtraukti kitą įdėtinio X serverio variantą.
-                # -Ddri1=true # Įtraukti pasenusį DRI1 palaikymą.
-                # -Dsystemd_logind=true # Naudoti systemd-logind vietoj elogind/kitų sesijų valdymo.
-            )
-            desktop_meson xorg-server "${xorg_flags[@]}" ;;
+        xorg-server) desktop_xorg_server ;;
         # Cairo enables PNG, font and Xlib/XCB rendering dependencies; tests off.
         cairo) desktop_meson cairo -Dzlib=enabled -Dglib=enabled -Dtests=disabled -Dfontconfig=enabled -Dfreetype=enabled -Dxlib=enabled -Dxcb=enabled -Dpng=enabled ;;
-        harfbuzz) desktop_meson harfbuzz -Dglib=enabled -Dfreetype=enabled -Dgobject=disabled \
-            -Dicu=disabled -Dtests=disabled -Ddocs=disabled -Dutilities=disabled ;;
+        harfbuzz)
+            if [[ "$DESKTOP_CHOICE" == cinnamon ]]; then
+                desktop_meson harfbuzz -Dglib=enabled -Dfreetype=enabled -Dgobject=enabled \
+                    -Dintrospection=enabled -Dicu=disabled -Dtests=disabled -Ddocs=disabled -Dutilities=disabled
+            else
+                desktop_meson harfbuzz -Dglib=enabled -Dfreetype=enabled -Dgobject=disabled \
+                    -Dicu=disabled -Dtests=disabled -Ddocs=disabled -Dutilities=disabled
+            fi ;;
         # FriBidi runtime only: omit docs and tests.
         fribidi) desktop_meson fribidi -Ddocs=false -Dtests=false ;;
-        pango) desktop_meson pango -Dfontconfig=enabled -Dfreetype=enabled -Dcairo=enabled -Dintrospection=disabled -Ddocumentation=false -Dbuild-testsuite=false -Dbuild-examples=false ;;
-        gdk-pixbuf) desktop_meson gdk-pixbuf -Dpng=enabled -Djpeg=disabled -Dtiff=disabled -Dgif=enabled -Dbuiltin_loaders=png,gif -Dintrospection=disabled -Dman=false -Dtests=false -Dinstalled_tests=false ;;
-        at-spi2-core) desktop_meson at-spi2-core -Dx11=enabled -Dintrospection=disabled -Dgtk2_atk_adaptor=false -Duse_systemd=false -Ddbus_daemon=/usr/bin/dbus-daemon ;;
+        pango)
+            if [[ "$DESKTOP_CHOICE" == cinnamon ]]; then
+                desktop_meson pango -Dfontconfig=enabled -Dfreetype=enabled -Dcairo=enabled \
+                    -Dintrospection=enabled -Ddocumentation=false -Dbuild-testsuite=false -Dbuild-examples=false
+            else
+                desktop_meson pango -Dfontconfig=enabled -Dfreetype=enabled -Dcairo=enabled \
+                    -Dintrospection=disabled -Ddocumentation=false -Dbuild-testsuite=false -Dbuild-examples=false
+            fi ;;
+        gdk-pixbuf)
+            if [[ "$DESKTOP_CHOICE" == cinnamon ]]; then
+                desktop_meson gdk-pixbuf -Dpng=enabled -Djpeg=disabled -Dtiff=disabled \
+                    -Dgif=enabled -Dbuiltin_loaders=png,gif -Dintrospection=enabled \
+                    -Dman=false -Dtests=false -Dinstalled_tests=false
+            else
+                desktop_meson gdk-pixbuf -Dpng=enabled -Djpeg=disabled -Dtiff=disabled \
+                    -Dgif=enabled -Dbuiltin_loaders=png,gif -Dintrospection=disabled \
+                    -Dman=false -Dtests=false -Dinstalled_tests=false
+            fi ;;
+        at-spi2-core)
+            source=$(unpack at-spi2-core)
+            # Upstream adds its XML-loader test helpers to the default build;
+            # they are not runtime components and pull extra test-only headers.
+            python3 - "$source/meson.build" <<'PY_ATSPI_SKIP_TESTS'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = "  subdir('tests')"
+new = "  if false\n    subdir('tests')\n  endif"
+if old in s:
+    s = s.replace(old, new, 1)
+elif new not in s:
+    raise SystemExit('at-spi2-core tests subdir declaration not found')
+p.write_text(s)
+PY_ATSPI_SKIP_TESTS
+            desktop_meson at-spi2-core -Dx11=enabled -Dintrospection=disabled -Dgtk2_atk_adaptor=false -Duse_systemd=false -Ddbus_daemon=/usr/bin/dbus-daemon ;;
         libepoxy) desktop_meson libepoxy -Dglx=yes -Degl=yes -Dx11=true -Dtests=false ;;
         # Mesa uses the GLVND dispatch ABI for GLX/EGL clients.
         libglvnd) desktop_meson libglvnd -Dx11=enabled -Dglx=enabled -Degl=true \
@@ -5143,7 +6835,8 @@ PY_LXSESSION_MAKEFILE
             local -a gtk_flags=(
                 -Dx11_backend=true       # įjungia GTK X11/Xorg langų sistemą
                 -Dwayland_backend=false # nekuria GTK Wayland langų sistemos
-                -Dintrospection=false  # nekuria GObject introspection metaduomenų
+                -Dintrospection="$([[ "$DESKTOP_CHOICE" == cinnamon ]] && printf true || printf false)" \
+                                       # Cinnamon JS runtime needs Gtk/Gdk GIR typelibs.
                 -Ddemos=false           # neįdiegia GTK demonstracinių programų
                 -Dexamples=false        # neįdiegia GTK pavyzdinių programų
                 -Dtests=false           # nekuria GTK testų
@@ -5158,6 +6851,12 @@ PY_LXSESSION_MAKEFILE
                 # -Dman=true # Kurti GTK man puslapius.
             )
             desktop_meson gtk "${gtk_flags[@]}" ;;
+        atk)
+            # ATK is a required GTK development dependency. Restore GLib
+            # headers after stage pruning, then build its runtime library.
+            [[ ! -f "$BUILD/glib/build.ninja" ]] ||
+                DESTDIR="$ROOT" meson install -C "$BUILD/glib" --no-rebuild --tags devel
+            desktop_meson atk -Dintrospection=false -Ddocs=false ;;
         # libxml2 stays a C runtime library; omit Python bindings and optional
         # LZMA/iconv integrations that would add dependencies.
         libxml2) autotools libxml2 --without-python --without-lzma --without-iconv --disable-static ;;
@@ -5178,7 +6877,12 @@ PY_LXSESSION_MAKEFILE
         # system does not build/install bash-completion, so keep this optional
         # dconf feature disabled for reproducible cross builds.
         # dconf omits shell completion, GTK/man docs and Vala bindings.
-        dconf) desktop_meson dconf -Dbash_completion=false -Dgtk_doc=false -Dman=false -Dvapi=false ;;
+        dconf)
+            # Restore GLib's development headers after package-stage pruning;
+            # dconf's shared-memory backend includes glib.h during compile.
+            [[ ! -f "$BUILD/glib/build.ninja" ]] ||
+                DESTDIR="$ROOT" meson install -C "$BUILD/glib" --no-rebuild
+            desktop_meson dconf -Dbash_completion=false -Dgtk_doc=false -Dman=false -Dvapi=false ;;
         dbus-glib)
             # dbus-glib 0.112 uses `bool` as a local variable name. Newer GCC
             # defaults to C23, where bool is a keyword, so rename that local.
@@ -5273,6 +6977,7 @@ PY_LXSESSION_MAKEFILE
             # keeps device/stream restore without another library dependency.
             local -a pulseaudio_flags=(
                 -Ddaemon=true       # kuria PulseAudio garso serverį
+                -Dglib=enabled     # kuria libpulse-mainloop-glib, kurio reikia Cinnamon garso valdymui
                 -Dclient=true       # kuria klientų biblioteką ir įrankius
                 -Dalsa=enabled      # įjungia ALSA garso įrenginių išvestį/įvestį
                 -Dudev=enabled      # leidžia aptikti garso įrenginius per udev
@@ -5540,6 +7245,32 @@ SOUND_MIXER_DESKTOP
             # polkit, modem, VPN, firewall, docs or optional CLI dependencies.
             # nmcli needs readline; nmtui needs newt/slang. The desktop uses
             # network-manager-applet, so omit both terminal frontends.
+            # Package-stage pruning removes GLib development headers. The
+            # introspection scanner needs gio/gio.h while generating libnm GIR.
+            [[ ! -f "$BUILD/glib/build.ninja" ]] ||
+                DESTDIR="$ROOT" meson install -C "$BUILD/glib" --no-rebuild
+            local networkmanager_host_pkg_config networkmanager_kmod_source networkmanager_libndp_source networkmanager_source
+            networkmanager_host_pkg_config=$(command -v pkg-config) ||
+                die "NetworkManager requires host pkg-config"
+            networkmanager_kmod_source=$(unpack kmod)
+            # Restore the pruned libudev.h API from this profile's eudev
+            # sources before compiling NM's udev integration.
+            (export CPPFLAGS="${CPPFLAGS:-} -I$SDK/sysroot/usr/include -I$networkmanager_kmod_source/libkmod"
+             export PKG_CONFIG="$networkmanager_host_pkg_config"
+             autotools eudev --disable-static --disable-introspection --disable-manpages \
+                 --disable-selinux --enable-kmod --disable-blkid --enable-hwdb=no \
+                 --with-rootprefix=/usr --with-rootrundir=/run)
+            # NetworkManager's router-discovery backend also needs libndp's
+            # development headers, which are pruned after its package stage.
+            networkmanager_libndp_source=$(unpack libndp)
+            (cd "$networkmanager_libndp_source"; NOCONFIGURE=1 ./autogen.sh)
+            autotools libndp --disable-static
+            # Upstream GLib examples are build-only programs (and pull in a
+            # util-linux development dependency); the target image needs the
+            # libnm library and GIR, not these sample binaries.
+            networkmanager_source=$(unpack NetworkManager)
+            sed -i "s|^subdir('examples/C/glib')$|# Build-only GLib examples omitted from this cross-compiled system.|" \
+                "$networkmanager_source/meson.build"
             local -a networkmanager_flags=(
                 -Dsystemdsystemunitdir=no # nediegia systemd paslaugų failų
                 -Dsystemdsystemgeneratordir=no # nediegia systemd generatoriaus
@@ -5573,7 +7304,10 @@ SOUND_MIXER_DESKTOP
                 -Ddocs=false # nekuria dokumentacijos
                 -Dman=false # nekuria man puslapių
                 -Dtests=no # nekuria testų
-                -Dintrospection=false # nekuria GObject introspection metaduomenų
+                # Cinnamon's panel imports the NM namespace at runtime. Build
+                # libnm's GIR/typelib so the session does not crash while
+                # loading network applets.
+                -Dintrospection=true # kuria NM GObject introspection metaduomenis Cinnamon skydeliui
                 -Dvapi=false # nekuria Vala API metaduomenų
                 # -Dnmcli=true # Kurti terminalo NetworkManager valdymo komandą.
                 # -Dnmtui=true # Kurti tekstinį valdymo meniu (reikia newt/slang).
@@ -5589,8 +7323,21 @@ SOUND_MIXER_DESKTOP
             meson_package libsecret -Dcrypto=disabled -Dmanpage=false -Dvapi=false \
                 -Dgtk_doc=false -Dintrospection=false -Dbash_completion=disabled ;;
         libnma)
-            meson_package libnma -Dlibnma_gtk4=false -Dgcr=false -Diso_codes=false \
-                -Dmobile_broadband_provider_info=false -Dintrospection=false \
+            local nma_dep
+            # Restore pruned headers and pkg-config files for libnma's GIR scan.
+            for nma_dep in glib cairo harfbuzz fribidi pango gdk-pixbuf at-spi2-core \
+                           xorgproto libXau libXdmcp xcb-proto libxcb xtrans libX11 \
+                           libXext libXrender libXfixes libXi libXrandr libXcursor \
+                           libXinerama libXcomposite libXdamage libXtst libXres \
+                           libXpresent libXxf86vm libICE libSM gtk NetworkManager; do
+                if [[ -f "$BUILD/$nma_dep/build.ninja" ]]; then
+                    DESTDIR="$ROOT" meson install -C "$BUILD/$nma_dep" --no-rebuild
+                elif [[ -f "$BUILD/$nma_dep/Makefile" ]]; then
+                    make -C "$BUILD/$nma_dep" DESTDIR="$ROOT" install-data
+                fi
+            done
+            desktop_meson libnma -Dlibnma_gtk4=false -Dgcr=false -Diso_codes=false \
+                -Dmobile_broadband_provider_info=false -Dintrospection=true \
                 -Dvapi=false -Dgtk_doc=false ;;
         network-manager-applet)
             meson_package network-manager-applet -Dappindicator=no -Dwwan=false \
@@ -5652,6 +7399,7 @@ WPA_DBUS_POLICY
         libogg) autotools libogg --disable-static ;;
         libvorbis) autotools libvorbis --disable-static ;;
         libcanberra) autotools libcanberra --disable-static --enable-alsa --disable-oss --disable-pulse --disable-gstreamer --disable-udev --disable-gtk --enable-gtk3 --disable-tdb --disable-gtk-doc ;;
+        gsound) desktop_meson gsound -Dintrospection=true -Denable_vala=false -Dgtk_doc=false ;;
         libnotify) desktop_meson libnotify -Dgtk_doc=false -Dintrospection=disabled -Dtests=false -Dman=false -Ddocbook_docs=disabled ;;
         duktape)
             source=$(unpack duktape)
@@ -5659,10 +7407,17 @@ WPA_DBUS_POLICY
                 CFLAGS="${CFLAGS:-} -fPIC" INSTALL_PREFIX=/usr LIBDIR=/lib \
                 DESTDIR="$ROOT" install ;;
         polkit)
-            local session_tracking=logind
+            local session_tracking=logind duktape_source
             [[ "$INIT_CHOICE" == systemd ]] || session_tracking=elogind
+            # Duktape runtime files are retained, but rootfs pruning may have
+            # removed its public headers needed to rebuild polkit.
+            duktape_source=$(unpack duktape)
+            install -Dm0644 "$duktape_source/src/duktape.h" \
+                "$ROOT/usr/include/duktape.h"
+            install -Dm0644 "$duktape_source/src/duk_config.h" \
+                "$ROOT/usr/include/duk_config.h"
             desktop_meson polkit -Dsession_tracking="$session_tracking" -Dauthfw=shadow \
-                -Dintrospection=false -Dgtk_doc=false -Dman=false -Dtests=false \
+                -Dintrospection=true -Dgtk_doc=false -Dman=false -Dtests=false \
                 -Dsystemdsystemunitdir=/usr/lib/systemd/system -Dos_type=lfs \
                 -Dprivileged_group=sudo ;;
         linux-pam)
@@ -5700,7 +7455,10 @@ WPA_DBUS_POLICY
               make -j"$JOBS"
               make DESTDIR="$ROOT" install-libs
               make -C lib/ext2fs DESTDIR="$ROOT" install
-              make -C lib/e2p DESTDIR="$ROOT" install ) ;;
+              make -C lib/e2p DESTDIR="$ROOT" install
+              # The installer formats its root partition with mkfs.ext4.
+              # Install e2fsprogs binaries as well as the runtime libraries.
+              make DESTDIR="$ROOT" install-progs-recursive ) ;;
         libblockdev) autotools libblockdev --disable-static --disable-tests \
             --enable-introspection=no --with-python3=no --with-gtk-doc=no --with-tools=no \
             --with-loop --with-swap --with-part --with-fs --without-btrfs --without-crypto \
@@ -5756,19 +7514,122 @@ new = """  BDPluginSpec fs_plugin = {BD_PLUGIN_FS, NULL};
 
   /* This profile includes the core partition, swap, loop, and filesystem plugins. */
   BDPluginSpec *plugins[] = {&part_plugin, &swap_plugin, &loop_plugin, &fs_plugin, NULL};"""
-if old in text:
+old_with_smart = old.replace(
+    "  BDPluginSpec nvme_plugin = {BD_PLUGIN_NVME, NULL};\n\n",
+    "  BDPluginSpec nvme_plugin = {BD_PLUGIN_NVME, NULL};\n"
+    "#ifdef HAVE_SMART\n  BDPluginSpec smart_plugin = {BD_PLUGIN_SMART, NULL};\n#endif\n",
+).replace(
+    "&fs_plugin, &crypto_plugin, &nvme_plugin, NULL};",
+    "&fs_plugin, &crypto_plugin, &nvme_plugin,\n"
+    "#ifdef HAVE_SMART\n                             &smart_plugin,\n#endif\n"
+    "                             NULL};",
+)
+if old_with_smart in text:
+    daemon.write_text(text.replace(old_with_smart, new, 1))
+elif old in text:
     daemon.write_text(text.replace(old, new, 1))
 elif new not in text:
     raise SystemExit("Could not patch UDisks libblockdev plugin set")
 PY
             autotools udisks --disable-static --disable-man --disable-gtk-doc \
                 --enable-introspection=no --disable-dependency-tracking \
-                --disable-btrfs --disable-lvm2 --disable-iscsi --disable-lsm \
+                --disable-btrfs --disable-lvm2 --disable-iscsi --disable-lsm --disable-smart \
                 --with-systemdsystemunitdir=/usr/lib/systemd/system ;;
         libusb) autotools libusb --disable-static --disable-udev ;;
         libgudev) desktop_meson libgudev -Dintrospection=disabled -Dtests=disabled ;;
         upower)
             source=$(unpack upower)
+            local upower_dep
+            for upower_dep in glib eudev libgudev; do
+                if [[ -f "$BUILD/$upower_dep/build.ninja" ]]; then
+                    DESTDIR="$ROOT" meson install -C "$BUILD/$upower_dep" --no-rebuild
+                elif [[ -f "$BUILD/$upower_dep/Makefile" ]]; then
+                    make -C "$BUILD/$upower_dep" DESTDIR="$ROOT" install-data
+                fi
+            done
+            if [[ ! -f "$ROOT/usr/include/gudev-1.0/gudev/gudev.h" ]]; then
+                local upower_host_pkg_config upower_kmod_source
+                upower_host_pkg_config=$(command -v pkg-config) ||
+                    die "UPower requires host pkg-config"
+                upower_kmod_source=$(unpack kmod)
+                (export CPPFLAGS="${CPPFLAGS:-} -I$SDK/sysroot/usr/include -I$upower_kmod_source/libkmod"
+                 export PKG_CONFIG="$upower_host_pkg_config"
+                 autotools eudev --disable-static --disable-introspection --disable-manpages \
+                     --disable-selinux --enable-kmod --disable-blkid --enable-hwdb=no \
+                     --with-rootprefix=/usr --with-rootrundir=/run)
+                desktop_meson libgudev -Dintrospection=disabled -Dtests=disabled
+            fi
+            if [[ ! -f "$ROOT/usr/include/polkit-1/polkit/polkit.h" ]]; then
+                if [[ ! -f "$ROOT/usr/include/elogind/systemd/sd-login.h" ]]; then
+                    local upower_elogind_source upower_libcap_source
+                    if [[ ! -f "$ROOT/usr/include/security/pam_ext.h" ]]; then
+                        desktop_meson linux-pam -Ddocs=disabled -Daudit=disabled \
+                            -Deconf=disabled -Dlogind=disabled -Delogind=disabled \
+                            -Dpwaccess=disabled -Dselinux=disabled -Dnis=disabled \
+                            -Dexamples=false -Dpam_userdb=disabled -Dpam_unix=enabled \
+                            -Dpam_lastlog=disabled -Dopenssl=disabled -Dxtests=false
+                    fi
+                    upower_libcap_source=$(unpack libcap)
+                    make -C "$upower_libcap_source/libcap" -j"$JOBS" \
+                        CROSS_COMPILE="$TARGET-" BUILD_CC="$HOST_CC" \
+                        CC="$CC" AR="$AR" lib=lib prefix=/usr SHARED=yes GOLANG=no
+                    make -C "$upower_libcap_source/libcap" \
+                        CROSS_COMPILE="$TARGET-" BUILD_CC="$HOST_CC" \
+                        CC="$CC" AR="$AR" lib=lib prefix=/usr SHARED=yes GOLANG=no \
+                        DESTDIR="$ROOT" install
+                    autotools libxcrypt --disable-werror
+                    # Elogind uses libmount for runtime mount/session helpers.
+                    # Recreate util-linux's pruned development headers before
+                    # installing elogind's compatible sd-login headers.
+                    autotools zlib
+                    autotools util-linux NCURSESW6_CONFIG=/bin/false \
+                        NCURSESW5_CONFIG=/bin/false NCURSES6_CONFIG=/bin/false \
+                        NCURSES5_CONFIG=/bin/false --disable-all-programs \
+                        --disable-liblastlog2 --disable-libblkid --disable-libuuid \
+                        --disable-libfdisk --disable-libsmartcols --without-python \
+                        --without-systemd --without-libcap-ng --disable-makeinstall-chown \
+                        --disable-makeinstall-setuid --without-pam
+                    install -Dm0644 "$BUILD/util-linux/libmount/src/libmount.h" \
+                        "$ROOT/usr/include/libmount/libmount.h"
+                    upower_elogind_source=$(unpack elogind)
+                    sed -i "s/if get_option('nss-elogind') != false/if true/" \
+                        "$upower_elogind_source/src/shared/meson.build"
+                    desktop_meson elogind -Dmode=release -Dtests=false -Dman=disabled \
+                        -Dpam=enabled -Dpolkit=disabled -Dacl=disabled -Daudit=disabled \
+                        -Dselinux=disabled -Dnss-elogind=false -Duserdb=false \
+                        -Dvarlink=false -Dsysvinit-path=/etc/init.d -Dsysvrcnd-path=/etc/rc.d
+                fi
+                local upower_polkit_session_tracking=logind
+                local upower_polkit_compat_include=no
+                local upower_duktape_source
+                [[ "$INIT_CHOICE" == systemd ]] || upower_polkit_session_tracking=elogind
+                # Restore Duktape headers pruned from the build rootfs before
+                # compiling polkit's Duktape authority backend.
+                upower_duktape_source=$(unpack duktape)
+                install -Dm0644 "$upower_duktape_source/src/duktape.h" \
+                    "$ROOT/usr/include/duktape.h"
+                install -Dm0644 "$upower_duktape_source/src/duk_config.h" \
+                    "$ROOT/usr/include/duk_config.h"
+                autotools expat
+                if [[ "$upower_polkit_session_tracking" == elogind ]]; then
+                    [[ ! -L "$ROOT/usr/include/systemd" ||
+                       $(readlink "$ROOT/usr/include/systemd") != elogind ]] ||
+                        rm -f "$ROOT/usr/include/systemd"
+                    # Polkit's elogind backend uses the systemd header path;
+                    # Meson passes -I/usr/include/elogind, so expose the API
+                    # as elogind/systemd/sd-login.h for this temporary build.
+                    if [[ ! -e "$ROOT/usr/include/elogind/systemd" ]]; then
+                        ln -s . "$ROOT/usr/include/elogind/systemd"
+                        upower_polkit_compat_include=yes
+                    fi
+                fi
+                desktop_meson polkit -Dsession_tracking="$upower_polkit_session_tracking" \
+                    -Dauthfw=shadow -Dintrospection=true -Dgtk_doc=false -Dman=false \
+                    -Dtests=false -Dsystemdsystemunitdir=/usr/lib/systemd/system \
+                    -Dos_type=lfs -Dprivileged_group=sudo
+                [[ "$upower_polkit_compat_include" != yes ]] || \
+                    rm -f "$ROOT/usr/include/elogind/systemd"
+            fi
             cat > "$source/policy/meson.build" <<'UPower_POLICY'
 if polkit.found()
   configure_file(
@@ -5780,34 +7641,19 @@ if polkit.found()
   )
 endif
 UPower_POLICY
-            desktop_meson upower -Dman=false -Dgtk-doc=false -Dintrospection=disabled \
+            desktop_meson upower -Dman=false -Dgtk-doc=false -Dintrospection=enabled \
                 -Dos_backend=linux -Didevice=disabled -Dpolkit=enabled \
                 -Dsystemdsystemunitdir=/usr/lib/systemd/system -Dzshcompletiondir=no ;;
         libsecret) desktop_meson libsecret -Dcrypto=disabled -Dmanpage=false -Dvapi=false \
             -Dgtk_doc=false -Dintrospection=disabled -Dtests=false ;;
         mate-control-center)
             source=$(unpack mate-control-center)
-            python3 - "$source/configure.ac" <<'PY'
-from pathlib import Path
-import sys
-
-path = Path(sys.argv[1])
-text = path.read_text()
-start = text.find('AS_IF([test "x$enable_appindicator" = xyes],')
-end = text.find('\nhave_systemd=no', start)
-if start >= 0 and end > start:
-    text = text[:start] + 'APPINDICATOR_CFLAGS=""\nAPPINDICATOR_LIBS=""\n' + text[end:]
-elif 'APPINDICATOR_CFLAGS=""' not in text:
-    raise SystemExit('Could not disable optional MATE appindicator dependency')
-path.write_text(text)
-PY
-            ( cd "$source"; autoconf )
-            ac_cv_func_XScreenSaverQueryInfo=no \
-            ac_cv_lib_Xss_XScreenSaverQueryInfo=no \
-            ac_cv_lib_Xext_XScreenSaverQueryInfo=no \
-            autotools mate-control-center --disable-static \
-                --disable-gtk-doc --without-accountsservice --disable-systemd \
-                ;;
+            sed -i '/^else$/ { N; /appindicator = false$/ { N; s/ayatana = true$/ayatana = false/; }; P; D; }' "$source/meson.build"
+            sed -i "s/^subdir('typing-break')$/# Typing break requires AppIndicator./" "$source/meson.build"
+            # Install the English policy when host gettext lacks PolicyKit ITS rules.
+            sed -i "/^policy = /,\$ { s/^i18n.merge_file(/configure_file(/; s/^  po_dir: po_dir,/  copy: true,/; }" \
+                "$source/capplets/display/meson.build"
+            desktop_meson mate-control-center -Daccountsservice=disabled -Dlibappindicator=no ;;
         mate-power-manager)
             source=$(unpack mate-power-manager)
             # This distro provides systemd or elogind, never ConsoleKit.
@@ -6054,6 +7900,7 @@ path.write_text(text)
 PY
             local gi_data=false
             local python_include_root
+            [[ "$DESKTOP_CHOICE" != cinnamon ]] || gi_data=true
             [[ "$DESKTOP_CHOICE" != mate || ${PKG_EOM:-no} != yes ]] || gi_data=true
             python_include_root=$(python3 -c 'import os, sysconfig; print(os.path.dirname(sysconfig.get_path("include")))')
             desktop_meson gobject-introspection -Dbuild_introspection_data="$gi_data" \
@@ -6200,14 +8047,22 @@ desktop_firmware() {
     fi
     [[ "$NETWORK" == yes || "$DESKTOP_CHOICE" != none ]] || return 0
     desktop_package linux-firmware
+    if [[ "$DESKTOP_CHOICE" != none ]]; then
+        local gpu_firmware_vendor
+        for gpu_firmware_vendor in amdgpu i915 nvidia; do
+            find "$ROOT/lib/firmware/$gpu_firmware_vendor" -type f -print -quit 2>/dev/null | grep -q . ||
+                die "Missing $gpu_firmware_vendor GPU firmware in the desktop image"
+        done
+    fi
 }
 
 graphical_desktop() {
-    [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox ]] || return 0
+    [[ "$DESKTOP_CHOICE" == x11 || "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == cinnamon ]] || return 0
     local -x PATH="$PATH" LDFLAGS="${LDFLAGS:-}" PYTHONPATH="${PYTHONPATH:-}" ACLOCAL_PATH="${ACLOCAL_PATH:-}"
     local -x xorg_cv_malloc0_returns_null=no
     export LDFLAGS="${LDFLAGS:-} -Wl,-rpath-link,$ROOT/usr/lib"
     local archive name python_dir mate_needs_gi=no
+    [[ "$DESKTOP_CHOICE" != cinnamon ]] || mate_needs_gi=yes
     if [[ "$DESKTOP_CHOICE" == mate ]] &&
        printf '%s\n' "$(mate_packages)" | grep -qx gobject-introspection; then
         mate_needs_gi=yes
@@ -6219,11 +8074,62 @@ graphical_desktop() {
     for name in $(desktop_base_packages); do
         local stage="desktop-$name-v1"
         case "$name" in
+            mesa) stage=desktop-mesa-v2 ;;
+            fontconfig) [[ "$DESKTOP_CHOICE" != cinnamon ]] || stage=desktop-fontconfig-v2 ;;
+            NetworkManager) stage=desktop-NetworkManager-v2 ;;
             eudev) stage=desktop-eudev-v2 ;;
-            gobject-introspection) stage=desktop-gobject-introspection-v4 ;;
+            upower) stage=desktop-upower-v2 ;;
+            muffin) stage=desktop-muffin-v5 ;;
+            libnma) stage=desktop-libnma-v2 ;;
+            xorg-server) stage=desktop-xorg-server-v2 ;;
+            gobject-introspection) stage=desktop-gobject-introspection-v5 ;;
+            xapps) stage=desktop-xapps-v2 ;;
+            xapp-symbolic-icons) stage=desktop-xapp-symbolic-icons-v1 ;;
+            harfbuzz) stage=desktop-harfbuzz-v3 ;;
+            pango) stage=desktop-pango-v2 ;;
+            gdk-pixbuf) stage=desktop-gdk-pixbuf-v2 ;;
+            dbus) stage=desktop-dbus-v4 ;;
+            libxml2) stage=desktop-libxml2-v3 ;;
+            gtk) stage=desktop-gtk-v2 ;;
+            graphene) stage=desktop-graphene-v2 ;;
             sound-mixer) stage=desktop-sound-mixer-v2 ;;
+            at-spi2-core) stage=desktop-at-spi2-core-v3 ;;
+            glib) stage=desktop-glib-v2 ;;
+            pcre2) stage=desktop-pcre2-v2 ;;
+            libffi) stage=desktop-libffi-v2 ;;
+            zlib) stage=desktop-zlib-v2 ;;
+            dbus) stage=desktop-dbus-v4 ;;
+            expat) stage=desktop-expat-v2 ;;
+            libX11) stage=desktop-libX11-v3 ;;
+            xorgproto) stage=desktop-xorgproto-v2 ;;
+            xtrans) stage=desktop-xtrans-v4 ;;
+            libxcb) stage=desktop-libxcb-v2 ;;
+            libXau) stage=desktop-libXau-v2 ;;
+            libXdmcp) stage=desktop-libXdmcp-v2 ;;
+            libXi) stage=desktop-libXi-v2 ;;
+            libXext) stage=desktop-libXext-v2 ;;
+            libXfixes) stage=desktop-libXfixes-v2 ;;
+            libXtst) stage=desktop-libXtst-v2 ;;
+            libxkbcommon) stage=desktop-libxkbcommon-v3 ;;
         esac
+        if [[ "$name" == gobject-introspection && "$DESKTOP_CHOICE" == cinnamon ]]; then
+            # Meson requires an exe_wrapper while configuring GI itself; the
+            # wrapper also lets later Pango/Cogl GIR scans run target dumpers.
+            desktop_prepare_gi_cross_tools
+        fi
+        if [[ "$name" == gtk && "$DESKTOP_CHOICE" == cinnamon ]]; then
+            # GTK's GIR imports ATK's GIR. Generate target metadata here, after
+            # ATK/GI have been installed and before GTK's GIR scanner runs.
+            desktop_generate_atk_introspection
+        fi
         step "$stage" desktop_package "$name"
+        if [[ "$name" == gobject-introspection && "$DESKTOP_CHOICE" == cinnamon ]]; then
+            # Recreate target shims after the package installs its scripts.
+            desktop_prepare_gi_cross_tools
+            # GLib was bootstrapped before GI existed. Reconfigure it now to
+            # generate the GioUnix typelib required by Cinnamon's JS runtime.
+            step desktop-glib-introspection-v1 desktop_glib_introspection
+        fi
         remove_installed_libtool_archives
         desktop_host_tools
         if [[ "$name" == xcb-proto ]]; then
@@ -6238,16 +8144,63 @@ graphical_desktop() {
         mate) read -r -a desktop_app_packages <<< "$(mate_packages | tr '\n' ' ')" ;;
         lxde) read -r -a desktop_app_packages <<< "$(lxde_packages | tr '\n' ' ')" ;;
         fluxbox) read -r -a desktop_app_packages <<< "$(fluxbox_packages | tr '\n' ' ')" ;;
+        cinnamon) read -r -a desktop_app_packages <<< "$(cinnamon_packages | tr '\n' ' ')" ;;
     esac
     for name in "${desktop_app_packages[@]}"; do
         local stage="desktop-$name-v1"
-        [[ "$name" != gobject-introspection ]] || stage=desktop-gobject-introspection-v4
+        [[ "$name" != python3.13 ]] || stage=desktop-python3.13-v2
+        [[ "$name" != pycairo ]] || stage=desktop-pycairo-v1
+        [[ "$name" != pygobject ]] || stage=desktop-pygobject-v1
+        [[ "$name" != cinnamon-menu-editor ]] || stage=desktop-cinnamon-menu-editor-v3
+        [[ "$name" != cinnamon-control-center ]] || stage=desktop-cinnamon-control-center-v2
+        [[ "$name" != gobject-introspection ]] || stage=desktop-gobject-introspection-v5
+        if [[ "$name" == python3.13 || "$name" == pycairo || "$name" == pygobject ]]; then
+            # Completed profiles prune headers and pkg-config files. Restore
+            # the pinned target development outputs before building Python's
+            # interpreter and its native GTK/Cairo extension modules.
+            desktop_restore_meson_development_outputs
+        fi
         [[ "$name" != mate-session-manager ]] || stage=desktop-mate-session-manager-v4
         [[ "$name" != mate-settings-daemon ]] || stage=desktop-mate-settings-daemon-v3
         [[ "$name" != mate-power-manager ]] || stage=desktop-mate-power-manager-v2
         [[ "$name" != caja ]] || stage=desktop-caja-v2
         # Avoid reusing libxklavier artifacts that embed the build-root XKB path.
         [[ "$name" != libxklavier ]] || stage=desktop-libxklavier-v2
+        [[ "$name" != mozjs-115 ]] || stage=desktop-mozjs-115-v2
+        [[ "$name" != cjs ]] || stage=desktop-cjs-v3
+        [[ "$name" != xapps ]] || stage=desktop-xapps-v2
+        [[ "$name" != xapp-symbolic-icons ]] || stage=desktop-xapp-symbolic-icons-v1
+        [[ "$name" != libxkbcommon ]] || stage=desktop-libxkbcommon-v3
+        [[ "$name" != cinnamon ]] || stage=desktop-cinnamon-v5
+        if [[ "$name" == cinnamon ]]; then
+            desktop_restore_meson_development_outputs
+        fi
+        [[ "$name" != muffin ]] || stage=desktop-muffin-v5
+        [[ "$name" != polkit ]] || stage=desktop-polkit-v2
+        [[ "$name" != upower ]] || stage=desktop-upower-v2
+        [[ "$name" != gcr ]] || stage=desktop-gcr-v2
+        [[ "$name" != graphene ]] || stage=desktop-graphene-v2
+        [[ "$name" != json-glib ]] || stage=desktop-json-glib-v2
+        [[ "$name" != cinnamon-desktop ]] || stage=desktop-cinnamon-desktop-v5
+        [[ "$name" != zstd ]] || stage=desktop-zstd-v2
+        [[ "$name" != librsvg ]] || stage=desktop-librsvg-v2
+        [[ "$name" != at-spi2-core ]] || stage=desktop-at-spi2-core-v3
+        [[ "$name" != glib ]] || stage=desktop-glib-v2
+        [[ "$name" != pcre2 ]] || stage=desktop-pcre2-v2
+        [[ "$name" != libffi ]] || stage=desktop-libffi-v2
+        [[ "$name" != zlib ]] || stage=desktop-zlib-v2
+        [[ "$name" != dbus ]] || stage=desktop-dbus-v2
+        [[ "$name" != expat ]] || stage=desktop-expat-v2
+        [[ "$name" != libX11 ]] || stage=desktop-libX11-v3
+        [[ "$name" != xorgproto ]] || stage=desktop-xorgproto-v2
+        [[ "$name" != xtrans ]] || stage=desktop-xtrans-v4
+        [[ "$name" != libxcb ]] || stage=desktop-libxcb-v2
+        [[ "$name" != libXau ]] || stage=desktop-libXau-v2
+        [[ "$name" != libXdmcp ]] || stage=desktop-libXdmcp-v2
+        [[ "$name" != libXi ]] || stage=desktop-libXi-v2
+        [[ "$name" != libXext ]] || stage=desktop-libXext-v2
+        [[ "$name" != libXfixes ]] || stage=desktop-libXfixes-v2
+        [[ "$name" != libXtst ]] || stage=desktop-libXtst-v2
         step "$stage" desktop_package "$name"
         find "$ROOT/usr/lib" -name '*.la' -type f -delete
         desktop_host_tools
@@ -6258,10 +8211,10 @@ configure_desktop_init_services() {
     local unit_dir="$ROOT/etc/systemd/system"
     local needs_desktop_auth=no
     local upower_enabled=no
-    [[ ${DESKTOP_CHOICE:-none} != mate && \
+    [[ ${DESKTOP_CHOICE:-none} != mate && ${DESKTOP_CHOICE:-none} != cinnamon && \
        ${PKG_MATE_CONTROL_CENTER:-no} != yes && \
        ${PKG_MATE_POWER_MANAGER:-no} != yes ]] || needs_desktop_auth=yes
-    [[ ${DESKTOP_CHOICE:-none} != mate && ${PKG_FIREFOX:-no} != yes ]] || upower_enabled=yes
+    [[ ${DESKTOP_CHOICE:-none} != mate && ${DESKTOP_CHOICE:-none} != cinnamon && ${PKG_FIREFOX:-no} != yes ]] || upower_enabled=yes
     mkdir -p "$ROOT/usr/libexec"
     cat > "$ROOT/usr/libexec/diy-mount-devpts" <<'DEVPTS'
 #!/bin/sh
@@ -6277,6 +8230,13 @@ if [ -e /dev/pts/ptmx ]; then
 fi
 DEVPTS
     chmod 0755 "$ROOT/usr/libexec/diy-mount-devpts"
+    # Remove obsolete per-service entries left by earlier versions of the
+    # Cinnamon runit profile. The shared boot helper owns these daemons now.
+    if [[ "$INIT_CHOICE" == runit && "$DESKTOP_CHOICE" == cinnamon ]]; then
+        rm -rf "$ROOT/etc/service/diy-runtime-init" "$ROOT/etc/service/diy-dbus" \
+            "$ROOT/etc/service/elogind" "$ROOT/etc/service/polkit" \
+            "$ROOT/etc/service/wpa_supplicant" "$ROOT/etc/service/NetworkManager"
+    fi
     cat > "$ROOT/usr/libexec/diy-desktop-cache" <<'CACHE'
 #!/bin/sh
 mkdir -p /run/dbus /tmp/.X11-unix /tmp/.ICE-unix
@@ -6568,6 +8528,7 @@ UNIT
             cat > "$ROOT/usr/libexec/diy-desktop-boot" <<'BOOT'
 #!/bin/sh
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin
+cd / || exit 1
 mkdir -p /run/udev /run/dbus /run/NetworkManager /tmp/.X11-unix /tmp/.ICE-unix
 /usr/libexec/diy-mount-devpts || exit 1
 /usr/sbin/udevd --daemon || exit 1
@@ -6576,9 +8537,24 @@ mkdir -p /run/udev /run/dbus /run/NetworkManager /tmp/.X11-unix /tmp/.ICE-unix
 /usr/bin/udevadm settle --timeout=15
 modprobe mt7921e 2>/dev/null || :
 /usr/libexec/diy-desktop-cache >/var/log/diy-desktop-cache.log 2>&1 </dev/null &
-/usr/bin/dbus-daemon --system --fork --nopidfile
 /usr/sbin/alsactl restore 2>/dev/null || /usr/sbin/alsactl init 2>/dev/null || :
 BOOT
+            # Dinit supervises the system bus itself; avoid racing its service
+            # with a second forked daemon during boot.
+            if [[ "$INIT_CHOICE" != dinit ]]; then
+                printf '%s\n' '/usr/bin/dbus-daemon --system --fork --nopidfile' \
+                    >> "$ROOT/usr/libexec/diy-desktop-boot"
+            fi
+            if [[ "$needs_desktop_auth" == yes ]]; then
+                # polkitd runs as its dedicated account under dinit. Systemd's
+                # tmpfiles normally creates this private runtime directory;
+                # prepare it explicitly before the dinit polkit service starts.
+                cat >> "$ROOT/usr/libexec/diy-desktop-boot" <<'BOOT_POLKIT_RUNTIME'
+mkdir -p /run/polkit-1
+chown polkitd:polkitd /run/polkit-1
+chmod 0755 /run/polkit-1
+BOOT_POLKIT_RUNTIME
+            fi
             if desktop_needs_logind && [[ "$INIT_CHOICE" != systemd && "$INIT_CHOICE" != dinit ]]; then
                 cat >> "$ROOT/usr/libexec/diy-desktop-boot" <<'BOOT_ELOGIND'
 /usr/libexec/elogind --daemon
@@ -6629,10 +8605,23 @@ configure_graphical_runtime_accounts_locale() {
         printf 'messagebus:x:81:81:D-Bus:/var/lib/dbus:/bin/false\n' >> "$ROOT/etc/passwd"
     grep -q '^messagebus:' "$ROOT/etc/group" || printf 'messagebus:x:81:\n' >> "$ROOT/etc/group"
     ensure_dbus_launch_helper_mode
+    if [[ ${DESKTOP_CHOICE:-none} == cinnamon && -d "$ROOT/usr/lib/python3/dist-packages" ]]; then
+        # Upstream CPython only searches site-packages. Our target PyGObject and
+        # pycairo stages install into the distro-style dist-packages directory,
+        # so expose that directory to every Python Cinnamon settings helper.
+        local python_stdlib python_site_dir
+        python_stdlib=$(find "$ROOT/usr/lib" -mindepth 1 -maxdepth 1 -type d \
+            -name 'python3.*' -print -quit)
+        [[ -n "$python_stdlib" ]] || die 'Cinnamon profile has no target Python 3 standard library'
+        python_site_dir="$python_stdlib/site-packages"
+        mkdir -p "$python_site_dir"
+        printf '%s\n' '/usr/lib/python3/dist-packages' > \
+            "$python_site_dir/diy-dist-packages.pth"
+    fi
     # Compile GSettings schemas before a graphical login can race the
     # background cache job. MATE settings daemons otherwise receive NULL
     # string-vector settings and emit GLib g_strv_length criticals.
-    if [[ ${DESKTOP_CHOICE:-none} == mate && -d "$ROOT/usr/share/glib-2.0/schemas" ]]; then
+    if [[ ( ${DESKTOP_CHOICE:-none} == mate || ${DESKTOP_CHOICE:-none} == cinnamon ) &&           -d "$ROOT/usr/share/glib-2.0/schemas" ]]; then
         [[ ! -x "$ROOT/usr/bin/glib-compile-schemas" ]] ||
             "$ROOT/usr/lib/${ELF_LOADER##*/}" --library-path "$ROOT/usr/lib" \
                 "$ROOT/usr/bin/glib-compile-schemas" "$ROOT/usr/share/glib-2.0/schemas"
@@ -6758,11 +8747,50 @@ configure_fluxbox_menu() {
 
 configure_desktop() {
     [[ "$DESKTOP_CHOICE" != none ]] || return 0
+    if [[ "$DESKTOP_CHOICE" == x11 ]]; then
+        # Keep the terminal-only graphical profile genuinely small: X starts
+        # one terminal, and exits when that terminal closes.
+        if [[ -L "$ROOT/usr/share/X11/xkb" ]]; then
+            local xkb_target
+            xkb_target=$(readlink "$ROOT/usr/share/X11/xkb")
+            if [[ "$xkb_target" == /usr/share/xkeyboard-config-* ]]; then
+                ln -sfn "../${xkb_target##*/}" "$ROOT/usr/share/X11/xkb"
+            fi
+        fi
+        [[ -d "$ROOT/usr/share/X11/xkb/rules" ]] || die 'Target XKB rules are missing under /usr/share/X11/xkb'
+        install -d -m0755 "$ROOT/etc/X11/xinit"
+        cat > "$ROOT/etc/X11/xinit/xinitrc" <<'X11_TERMINAL_XINITRC'
+#!/bin/sh
+exec xterm -geometry 100x32+16+16
+X11_TERMINAL_XINITRC
+        chmod 0755 "$ROOT/etc/X11/xinit/xinitrc"
+        return 0
+    fi
     local desktop_session_name needs_desktop_auth=no
-    [[ ${DESKTOP_CHOICE:-none} != mate && \
+    if [[ "$DESKTOP_CHOICE" == cinnamon ]]; then
+        # CJS 6.4 links against GIRepository 1.0, whose matching introspection
+        # namespace is GIRepository-2.0. GLib also ships a GIRepository-3.0
+        # typelib with the same GIRepository GType; GI's unversioned lookup
+        # sees both and registers that GType twice, aborting Cinnamon startup.
+        rm -f "$ROOT/usr/lib/girepository-1.0/GIRepository-3.0.typelib" \
+              "$ROOT/usr/share/gir-1.0/GIRepository-3.0.gir"
+        # xkeyboard-config installs into a versioned data directory and also
+        # creates an absolute X11/xkb symlink for the host. Replace it with a
+        # target-root relative link, which works after the ISO boots anywhere.
+        if [[ -L "$ROOT/usr/share/X11/xkb" ]]; then
+            local xkb_target
+            xkb_target=$(readlink "$ROOT/usr/share/X11/xkb")
+            if [[ "$xkb_target" == /usr/share/xkeyboard-config-* ]]; then
+                ln -sfn "../${xkb_target##*/}" "$ROOT/usr/share/X11/xkb"
+            fi
+        fi
+        [[ -d "$ROOT/usr/share/X11/xkb/rules" ]] ||
+            die 'Target XKB rules are missing under /usr/share/X11/xkb'
+    fi
+    [[ ${DESKTOP_CHOICE:-none} != mate && ${DESKTOP_CHOICE:-none} != cinnamon && \
        ${PKG_MATE_CONTROL_CENTER:-no} != yes && \
        ${PKG_MATE_POWER_MANAGER:-no} != yes ]] || needs_desktop_auth=yes
-    case "$DESKTOP_CHOICE" in mate) desktop_session_name=MATE ;; lxde) desktop_session_name=LXDE ;; esac
+    case "$DESKTOP_CHOICE" in mate) desktop_session_name=MATE ;; lxde) desktop_session_name=LXDE ;; cinnamon) desktop_session_name=X-Cinnamon ;; esac
     if [[ "$DESKTOP_CHOICE" == mate ]]; then
         # Keep MATE's session defaults consistent with this minimal image:
         # no dock provider or gnome-keyring package is built, and the upstream
@@ -6786,12 +8814,273 @@ configure_desktop() {
             sed -i "s|<default>'Menta'</default>|<default>'Adwaita'</default>|" \
                 "$mate_schema/org.mate.interface.gschema.xml"
         fi
-        if [[ -f "$mate_schema/org.mate.marco.gschema.xml" ]]; then
+            if [[ -f "$mate_schema/org.mate.marco.gschema.xml" ]]; then
             sed -i \
                 -e "s|<default>'Menta'</default>|<default>'Atlanta'</default>|" \
                 -e '/<key name="compositing-manager" type="b">/,/<\/key>/s|<default>true</default>|<default>false</default>|' \
                 "$mate_schema/org.mate.marco.gschema.xml"
         fi
+    fi
+    if [[ "$DESKTOP_CHOICE" == cinnamon ]]; then
+        # Meson generates these target typelibs but omits them from this
+        # cross install. CJS's GObject overrides need CjsPrivate; Cinnamon's
+        # Meta typelib in turn requires Muffin's version-0 Clutter/Cogl
+        # typelibs. Missing any member makes cinnamon.desktop exit at startup.
+        local gi_dir="$ROOT/usr/lib/girepository-1.0" gi_file muffin_lib muffin_link
+        mkdir -p "$gi_dir"
+        # Cinnamon's executable searches /usr/lib/cinnamon for Muffin's
+        # Clutter ABI. Meson installs those private libraries under
+        # /usr/lib/muffin, so expose their SONAME links in Cinnamon's RPATH.
+        mkdir -p "$ROOT/usr/lib/cinnamon"
+        for muffin_lib in "$ROOT"/usr/lib/muffin/libmuffin-*.so*; do
+            [[ -e "$muffin_lib" || -L "$muffin_lib" ]] || continue
+            muffin_link="$ROOT/usr/lib/cinnamon/${muffin_lib##*/}"
+            ln -sfn "../muffin/${muffin_lib##*/}" "$muffin_link"
+        done
+        [[ -e "$ROOT/usr/lib/cinnamon/libmuffin-clutter-0.so.0" ]] ||
+            die 'Muffin Clutter runtime library is missing from Cinnamon library path'
+        for gi_file in \
+            "$BUILD/cjs/CjsPrivate-1.0.typelib" \
+            "$BUILD/muffin/src/Meta-0.typelib" \
+            "$BUILD/muffin/clutter/clutter/Cally-0.typelib" \
+            "$BUILD/muffin/clutter/clutter/Clutter-0.typelib" \
+            "$BUILD/muffin/clutter/clutter/ClutterX11-0.typelib" \
+            "$BUILD/muffin/cogl/cogl/Cogl-0.typelib" \
+            "$BUILD/muffin/cogl/cogl-pango/CoglPango-0.typelib" \
+            "$BUILD/cinnamon/src/st/St-1.0.typelib" \
+            "$BUILD/cinnamon/src/Cinnamon-0.1.typelib"; do
+            [[ -s "$gi_file" ]] || die "Missing Cinnamon runtime typelib: $gi_file"
+            install -m0644 "$gi_file" "$gi_dir/"
+        done
+        # cinnamon-launcher is a Python entry point, but this minimal target
+        # does not ship a Python interpreter. Launch Cinnamon directly; the
+        # session manager already supervises this required component.
+        local cinnamon_desktop="$ROOT/usr/share/applications/cinnamon.desktop"
+        if [[ -f "$cinnamon_desktop" ]]; then
+            sed -i 's|^Exec=/usr/bin/cinnamon-launcher$|Exec=/usr/bin/cinnamon --replace|' \
+                "$cinnamon_desktop"
+            grep -q '^Exec=/usr/bin/cinnamon --replace$' "$cinnamon_desktop" ||
+                die 'Could not configure direct Cinnamon session startup'
+        fi
+        cat > "$ROOT/usr/libexec/diy-cinnamon-session" <<'CINNAMON_SESSION'
+#!/bin/sh
+# Mark the session with the desktop identifiers used by Nemo, XApp and
+# Cinnamon's own settings helpers; dbus-run-session preserves this environment.
+export XDG_CURRENT_DESKTOP=X-Cinnamon
+export XDG_SESSION_DESKTOP=${DIY_CINNAMON_SESSION:-cinnamon}
+export DESKTOP_SESSION=cinnamon
+export XDG_SESSION_TYPE=x11
+exec dbus-run-session /usr/libexec/diy-cinnamon-session-bus
+CINNAMON_SESSION
+        chmod 0755 "$ROOT/usr/libexec/diy-cinnamon-session"
+        cat > "$ROOT/usr/libexec/diy-cinnamon-session-bus" <<'CINNAMON_SESSION_BUS'
+#!/bin/sh
+# Initialize a clean panel and wallpaper once for this user, before the
+# Cinnamon session manager reads its GSettings. Keep later user customizations.
+state_dir=$HOME/.config/diy-linux
+initialized=$state_dir/cinnamon-session-defaults-v3
+if [ ! -e "$initialized" ]; then
+    mkdir -p "$state_dir" || exit 1
+    /usr/bin/gsettings set org.cinnamon enabled-applets "['panel1:left:0:menu@cinnamon.org', 'panel1:left:1:grouped-window-list@cinnamon.org', 'panel1:right:0:systray@cinnamon.org', 'panel1:right:1:xapp-status@cinnamon.org', 'panel1:right:2:notifications@cinnamon.org', 'panel1:right:3:network@cinnamon.org', 'panel1:right:4:sound@cinnamon.org', 'panel1:right:5:calendar@cinnamon.org']" || exit 1
+    /usr/bin/gsettings set org.cinnamon.desktop.background picture-uri '@DIY_CINNAMON_WALLPAPER_URI@' || exit 1
+    /usr/bin/gsettings set org.cinnamon.desktop.background picture-options 'zoom' || exit 1
+    /usr/bin/gsettings set org.gnome.desktop.background picture-uri '@DIY_CINNAMON_WALLPAPER_URI@' || exit 1
+    /usr/bin/gsettings set org.gnome.desktop.background picture-uri-dark '@DIY_CINNAMON_WALLPAPER_URI@' || exit 1
+    /usr/bin/gsettings set org.gnome.desktop.background picture-options 'zoom' || exit 1
+    : > "$initialized" || exit 1
+fi
+session=${DIY_CINNAMON_SESSION:-cinnamon}
+exec /usr/bin/cinnamon-session --session "$session"
+CINNAMON_SESSION_BUS
+        chmod 0755 "$ROOT/usr/libexec/diy-cinnamon-session-bus"
+        # XApps installs this Python helper, but the target image intentionally
+        # has no Python runtime. Keep its D-Bus contract with the existing
+        # Bash and GLib tools so Cinnamon features can launch subprocesses.
+        if [[ -x "$ROOT/usr/bin/gdbus" ]]; then
+            cat > "$ROOT/usr/bin/cinnamon-subprocess-wrapper" <<'CINNAMON_SUBPROCESS_WRAPPER'
+#!/bin/bash
+process_id=$1
+shift
+if result=$("$@" 2>/dev/null); then
+    success=true
+else
+    result=''
+    success=false
+fi
+exec /usr/bin/gdbus call --session --dest org.Cinnamon \
+    --object-path /org/Cinnamon --method org.Cinnamon.PushSubprocessResult \
+    "$process_id" "$result" "$success"
+CINNAMON_SUBPROCESS_WRAPPER
+            chmod 0755 "$ROOT/usr/bin/cinnamon-subprocess-wrapper"
+        fi
+        # Keep Cinnamon's GJS imports on GIRepository 2.0. Both legacy GI
+        # (needed by CJS) and current GI 3.0 are shipped; without an explicit
+        # version the first Cinnamon import loads both typelibs, double-registers
+        # GIRepository, and exits before the panel starts.
+        local cinnamon_environment="$ROOT/usr/share/cinnamon/js/ui/environment.js"
+        if [[ -f "$cinnamon_environment" ]]; then
+            python3 - "$cinnamon_environment" <<'PY_CINNAMON_GI_VERSION'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+line = "imports.gi.versions.GIRepository = '2.0';\n"
+if line not in s:
+    marker = "imports.gi.versions.Gio = '2.0';\n"
+    if marker not in s:
+        raise SystemExit('Could not find Cinnamon GJS import-version block')
+    s = s.replace(marker, marker + line, 1)
+p.write_text(s)
+PY_CINNAMON_GI_VERSION
+        fi
+        # Screensaver is intentionally not part of this image; do not make it
+        # a required Cinnamon session component or the session manager aborts.
+        local session_file
+        for session_file in cinnamon cinnamon2d; do
+            local session_path="$ROOT/usr/share/cinnamon-session/sessions/$session_file.session"
+            [[ ! -f "$session_path" ]] || sed -i 's/org.cinnamon.ScreenSaver;//g' "$session_path"
+        done
+        # Do not rewrite Cinnamon's schema defaults. Its packaged
+        # enabled-applets default already provides the panel, while a broad
+        # replacement of every empty string-array default corrupts unrelated
+        # keys (extensions, desklets, histories, aliases, etc.).
+        local cinnamon_schema="$ROOT/usr/share/glib-2.0/schemas/org.cinnamon.gschema.xml"
+        if [[ -f "$cinnamon_schema" ]]; then
+            # Repair profiles generated by older versions of this script.
+            # Restore the affected upstream empty-array defaults, but leave
+            # enabled-applets intact (the packaged Cinnamon default is valid).
+            python3 - "$cinnamon_schema" <<'PY_CINNAMON_SCHEMA'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text()
+bad = re.compile(r"<default>\['panel1:left:0:menu@cinnamon\.org'.*?</default>")
+empty_keys = {
+    "enabled-extensions", "enabled-desklets", "enabled-search-providers",
+    "device-aliases", "disabled-open-search-providers", "command-history",
+    "looking-glass-history", "launcher-list", "bindings",
+    "demands-attention-ignored-wm-classes",
+    "demands-attention-passthru-wm-classes",
+}
+
+def fix_key(match):
+    block = match.group(0)
+    name = match.group(1)
+    if name in empty_keys:
+        block = bad.sub("<default>[]</default>", block, count=1)
+    return block
+
+text = re.sub(
+    r'<key\b[^>]*\bname="([^"]+)"[^>]*>.*?</key>',
+    fix_key, text, flags=re.S,
+)
+path.write_text(text)
+PY_CINNAMON_SCHEMA
+        fi
+        cat > "$ROOT/usr/bin/startcinnamon" <<'START_CINNAMON'
+#!/bin/sh
+# The live initramfs switches roots before starting the login service. Start
+# the graphical session from the new root so clients never inherit a stale
+# working directory from the initramfs.
+cd / || exit 1
+log_dir=${XDG_STATE_HOME:-"$HOME/.local/state"}/diy-linux
+mkdir -p "$log_dir" || exit 1
+log_file=$log_dir/cinnamon-session.log
+: >>"$log_file" || exit 1
+# A desktop autostart and a manual startcinnamon command can race or be
+# invoked from separate consoles. Keep one X/Muffin session per user so a
+# second server cannot take over the virtual console or reset shared settings.
+session_lock="${XDG_RUNTIME_DIR:-/tmp}/diy-cinnamon-session-$(id -u).lock"
+exec 9>"$session_lock" || exit 1
+if ! flock -n 9; then
+    printf '[diy-cinnamon] Cinnamon is already running; skipped a second X session.\n' >>"$log_file"
+    printf '%s\n' 'Cinnamon is already running on another console.'
+    exit 0
+fi
+# Clutter's compiled "*" default selects Cogl's generic "any" driver only.
+# On common QEMU GLX adapters that probe fails without trying legacy GL.
+# Cinnamon/Muffin use X11 GLX, so explicitly select Cogl's GL driver.
+export CLUTTER_BACKEND=x11
+export CLUTTER_DRIVER=gl
+printf '[diy-cinnamon] CLUTTER_BACKEND=%s CLUTTER_DRIVER=%s GALLIUM_DRIVER=%s\n' \
+    "$CLUTTER_BACKEND" "$CLUTTER_DRIVER" "${GALLIUM_DRIVER:-unset}" >>"$log_file"
+
+start_x_session() {
+    # Build a per-user pixbuf loader cache before GTK/Cinnamon load tray icons.
+    # The system cache is generated asynchronously during first boot, so do
+    # not let the desktop race that work or require writes to the read-only base.
+    local pixbuf_cache_dir="$HOME/.cache/diy-linux"
+    mkdir -p "$pixbuf_cache_dir" || return 1
+    if [ -x /usr/bin/gdk-pixbuf-query-loaders ]; then
+        /usr/bin/gdk-pixbuf-query-loaders /usr/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.so \
+            >"$pixbuf_cache_dir/loaders.cache" 2>>"$log_file" || return 1
+        export GDK_PIXBUF_MODULE_FILE="$pixbuf_cache_dir/loaders.cache"
+    fi
+    startx /usr/libexec/diy-cinnamon-session -- /usr/bin/X -depth 24 -keeptty -nolisten tcp "$@" \
+        >>"$log_file" 2>&1
+}
+
+# Cinnamon can keep the session process alive after Muffin fails, so a
+# post-failure retry may never run. Select the Mesa software GLX path before
+# the first start when the kernel exposes no DRM render node (e.g. QEMU std VGA).
+use_software_gl=no
+if ! find /dev/dri -maxdepth 1 -type c -name 'renderD*' -print -quit 2>/dev/null | grep -q .; then
+    use_software_gl=yes
+    export LIBGL_ALWAYS_SOFTWARE=true
+    export GALLIUM_DRIVER=softpipe
+    export DIY_CINNAMON_SESSION=cinnamon2d
+    export CLUTTER_PAINT=disable-culling
+    export CINNAMON_SLOWDOWN_FACTOR=0.0001
+    export CLUTTER_DEFAULT_FPS=15
+    # Muffin's Cogl Mesa-vendor detection is patched to identify softpipe
+    # correctly, so keep the normal Cinnamon session and let it disable
+    # hardware-only effects itself.
+    export MUFFIN_NO_SHADOWS=1
+    # Keep GLX direct. Forcing indirect GL breaks Cogl/Muffin on Mesa builds
+    # that provide the DRI2 software renderer through Xorg.
+    unset LIBGL_ALWAYS_INDIRECT
+    printf '[diy-cinnamon] No DRM render node; starting Cinnamon with direct Mesa softpipe GLX.\n' >>"$log_file"
+fi
+
+if [[ "$use_software_gl" == yes ]]; then
+    if start_x_session +iglx; then
+        exit 0
+    else
+        status=$?
+    fi
+elif start_x_session; then
+    exit 0
+else
+    status=$?
+fi
+
+# Cinnamon needs GLX. If Xorg exposes no usable direct-rendering device (for
+# example, a basic virtual VGA adapter), retry with Mesa's software renderer
+# and indirect GLX. Keep this as a fallback so real GPUs remain the first path.
+{
+    printf '\n[%s] Hardware GLX startup failed (status %s); retrying with Mesa softpipe.\n' \
+        "$(date '+%F %T')" "$status"
+} >>"$log_file"
+export LIBGL_ALWAYS_SOFTWARE=true
+export GALLIUM_DRIVER=softpipe
+export LIBGL_ALWAYS_INDIRECT=true
+if start_x_session +iglx; then
+    exit 0
+else
+    status=$?
+fi
+
+for console in /dev/tty1; do
+    if [ -w "$console" ]; then
+        printf '\nCinnamon failed to start. Recent details from %s:\n' "$log_file" >"$console"
+        tail -n 80 "$log_file" | fold -sw 78 >"$console"
+    fi
+done
+exit "$status"
+START_CINNAMON
+        chmod 0755 "$ROOT/usr/bin/startcinnamon"
     fi
     if [[ -x "$ROOT/usr/bin/xterm" ]]; then
         mkdir -p "$ROOT/usr/share/applications"
@@ -6869,6 +9158,21 @@ XTERM_DESKTOP
         fi
         if [[ "$DESKTOP_CHOICE" == lxde && -n "$wallpaper_default_path" ]]; then
             wallpaper_default_path="/usr/share/lxde/wallpapers/${wallpaper_default_path##*/}"
+        fi
+        if [[ "$DESKTOP_CHOICE" == cinnamon && -n "$wallpaper_default_path" ]]; then
+            local cinnamon_background_uri="file://$wallpaper_default_path"
+            sed -i "s|@DIY_CINNAMON_WALLPAPER_URI@|$cinnamon_background_uri|g" \
+                "$ROOT/usr/libexec/diy-cinnamon-session-bus"
+            cat > "$ROOT/usr/share/glib-2.0/schemas/99-diy-linux-background.gschema.override" <<CINNAMON_BACKGROUND
+[org.cinnamon.desktop.background]
+picture-uri='$cinnamon_background_uri'
+picture-options='zoom'
+
+[org.gnome.desktop.background]
+picture-uri='$cinnamon_background_uri'
+picture-uri-dark='$cinnamon_background_uri'
+picture-options='zoom'
+CINNAMON_BACKGROUND
         fi
     fi
     # ALSA kernel drivers are usable by the desktop user's audio group.
@@ -7327,6 +9631,26 @@ SESSION
         chmod 0755 "$ROOT/usr/bin/startmate" "$ROOT/usr/libexec/diy-mate-session"
     fi
     printf '[Settings]\ngtk-theme-name=Adwaita\ngtk-icon-theme-name=Adwaita\ngtk-font-name=DejaVu Sans 10\n' > "$ROOT/etc/gtk-3.0/settings.ini"
+    if [[ "$DESKTOP_CHOICE" == cinnamon ]]; then
+        # Leave GTK's normal background styling intact. Only Nemo's desktop
+        # surface must be transparent so the Cinnamon wallpaper remains visible.
+        cat > "$BUILD/cinnamon-nemo-desktop.css" <<'CINNAMON_NEMO_DESKTOP_CSS'
+.background.nemo-desktop-window,
+.nemo-desktop {
+    background-color: transparent;
+    background-image: none;
+    color: @window_fg_color;
+}
+CINNAMON_NEMO_DESKTOP_CSS
+        mkdir -p "$ROOT/etc/gtk-3.0" "$ROOT/etc/skel/.config/gtk-3.0" \
+            "$ROOT/home/$USER_NAME/.config/gtk-3.0"
+        local gtk_css_target
+        for gtk_css_target in "$ROOT/etc/gtk-3.0/gtk.css" \
+            "$ROOT/etc/skel/.config/gtk-3.0/gtk.css" \
+            "$ROOT/home/$USER_NAME/.config/gtk-3.0/gtk.css"; do
+            install -m0644 "$BUILD/cinnamon-nemo-desktop.css" "$gtk_css_target"
+        done
+    fi
     mkdir -p "$ROOT/usr/share/icons/hicolor/scalable/apps"
     cat > "$ROOT/usr/share/icons/hicolor/scalable/apps/diy-linux-logo.svg" <<'DIY_LOGO'
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
@@ -7340,7 +9664,7 @@ DIY_LOGO
     if command -v gtk-update-icon-cache >/dev/null 2>&1; then
         gtk-update-icon-cache --force "$ROOT/usr/share/icons/hicolor" >/dev/null 2>&1 || :
     fi
-    if [[ "$DESKTOP_CHOICE" != lxde ]]; then
+    if [[ "$DESKTOP_CHOICE" == mate ]]; then
     cat > "$ROOT/etc/xdg/autostart/nm-applet.desktop" <<NM_APPLET_AUTOSTART
 [Desktop Entry]
 Type=Application
@@ -7612,19 +9936,20 @@ user_password_prompt() {
 
 system_password_prompt() {
     local password confirmation
+    if [[ "$USER_PASSWORD_HASH" == '!' ]]; then user_password_prompt yes
+    else user_password_prompt no; fi
     while :; do
-        read -r -s -p "$(tr_text "Password for root and $USER_NAME: " "Root ir $USER_NAME slaptažodis: ")" password || exit 130
+        read -r -s -p "$(tr_text 'Root password: ' 'Root slaptažodis: ')" password || exit 130
         printf '\n'
         if [[ -z "$password" ]]; then
-            [[ "$ROOT_PASSWORD_HASH" != '!' && "$USER_PASSWORD_HASH" == "$ROOT_PASSWORD_HASH" ]] && break
-            printf '%s\n' "$(tr_text 'A shared password is required for the initial login.' 'Pradiniam prisijungimui reikia bendro slaptažodžio.')"
+            [[ "$ROOT_PASSWORD_HASH" != '!' ]] && break
+            printf '%s\n' "$(tr_text 'A root password is required.' 'Reikia root slaptažodžio.')"
             continue
         fi
         read -r -s -p "$(tr_text 'Repeat password: ' 'Pakartok slaptažodį: ')" confirmation || exit 130
         printf '\n'
         [[ "$password" == "$confirmation" ]] || { printf '%s\n' "$(tr_text 'Passwords do not match; try again.' 'Slaptažodžiai nesutampa; bandyk dar kartą.')"; continue; }
         ROOT_PASSWORD_HASH=$(printf '%s\n' "$password" | openssl passwd -6 -stdin)
-        USER_PASSWORD_HASH=$ROOT_PASSWORD_HASH
         break
     done
     unset password confirmation
@@ -7667,7 +9992,8 @@ configure_user() {
     # udev rules use these standard groups for device nodes. Creating them
     # avoids boot warnings and makes device permissions resolve consistently.
     for system_group in 'dialout:20' 'kmem:9' 'input:24' 'video:27' \
-        'sgx:994' 'lp:7' 'disk:6' 'cdrom:11' 'tape:26' 'kvm:36'; do
+        'sgx:994' 'lp:7' 'disk:6' 'cdrom:11' 'tape:26' 'kvm:36' \
+        'render:105' 'clock:997'; do
         IFS=: read -r system_group system_gid <<< "$system_group"
         if ! grep -q "^${system_group}:" "$ROOT/etc/group"; then
             while awk -F: -v gid="$system_gid" '$3==gid {found=1} END {exit !found}' "$ROOT/etc/group"; do
@@ -7691,6 +10017,12 @@ configure_user() {
         awk -F: -v OFS=: -v name="$USER_NAME" '$1=="audio" {n=split($4,a,","); found=0; for(i=1;i<=n;i++) if(a[i]==name) found=1; if(!found) $4=$4 ($4=="" ? "" : ",") name} {print}' \
             "$ROOT/etc/group" > "$ROOT/etc/group.tmp"
         mv "$ROOT/etc/group.tmp" "$ROOT/etc/group"
+        for system_group in video render; do
+            awk -F: -v OFS=: -v group="$system_group" -v name="$USER_NAME" \
+                '$1==group {n=split($4,a,","); found=0; for(i=1;i<=n;i++) if(a[i]==name) found=1; if(!found) $4=$4 ($4=="" ? "" : ",") name} {print}' \
+                "$ROOT/etc/group" > "$ROOT/etc/group.tmp"
+            mv "$ROOT/etc/group.tmp" "$ROOT/etc/group"
+        done
     fi
     if ! grep -q "^$USER_NAME:" "$ROOT/etc/shadow"; then
         printf '%s:%s:%s:0:99999:7:::\n' "$USER_NAME" "$USER_PASSWORD_HASH" "$(( SOURCE_DATE_EPOCH / 86400 ))" >> "$ROOT/etc/shadow"
@@ -7763,7 +10095,7 @@ BASH_PROFILE
         printf '\n[ -r "$HOME/.profile" ] && . "$HOME/.profile"\n' >> "$ROOT/home/$USER_NAME/.bash_profile"
     if [[ "$DESKTOP_AUTOSTART" == yes ]]; then
         desktop_start_command=startmate
-        case "$DESKTOP_CHOICE" in lxde) desktop_start_command=startlxde ;; fluxbox) desktop_start_command=startfluxbox ;; esac
+        case "$DESKTOP_CHOICE" in x11) desktop_start_command=startx ;; lxde) desktop_start_command=startlxde ;; fluxbox) desktop_start_command=startfluxbox ;; cinnamon) desktop_start_command=startcinnamon ;; esac
         cat > "$ROOT/usr/libexec/diy-desktop-autostart" <<'DESKTOP_AUTOSTART_HELPER'
 #!/bin/sh
 tty_name=$(tty 2>/dev/null) || exit 0
@@ -7806,6 +10138,9 @@ FISH_AUTOSTART
     cat > "$ROOT/etc/sudoers.tmp" <<'SUDOERS'
 Defaults env_reset
 Defaults secure_path="/usr/sbin:/usr/bin:/sbin:/bin"
+Defaults use_pty
+Defaults logfile=/var/log/sudo.log
+Defaults timestamp_timeout=5
 root ALL=(ALL:ALL) ALL
 %sudo ALL=(ALL:ALL) ALL
 SUDOERS
@@ -7815,6 +10150,27 @@ SUDOERS
     "$sudoers_validator" -cf "$ROOT/etc/sudoers.tmp" || die "$(tr_text 'Generated sudoers file failed validation' 'Sugeneruotas sudoers failas nepraėjo patikros')"
     chmod 0440 "$ROOT/etc/sudoers.tmp"
     mv -f "$ROOT/etc/sudoers.tmp" "$ROOT/etc/sudoers"
+    mkdir -p "$ROOT/var/log"
+    : >> "$ROOT/var/log/sudo.log"
+    chmod 0600 "$ROOT/var/log/sudo.log"
+    mkdir -p "$ROOT/etc/sysctl.d"
+    cat > "$ROOT/etc/sysctl.d/90-hardening.conf" <<'SYSCTL_HARDENING'
+kernel.kptr_restrict = 2
+kernel.dmesg_restrict = 1
+kernel.unprivileged_bpf_disabled = 1
+fs.protected_symlinks = 1
+fs.protected_hardlinks = 1
+fs.protected_fifos = 2
+fs.protected_regular = 2
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv6.conf.all.accept_redirects = 0
+SYSCTL_HARDENING
+    if [[ "$PKG_PING" == yes ]]; then
+        grep -q '^net.ipv4.ping_group_range' "$ROOT/etc/sysctl.d/90-hardening.conf" ||
+            printf 'net.ipv4.ping_group_range = 0 2147483647\n' >> "$ROOT/etc/sysctl.d/90-hardening.conf"
+    fi
 }
 
 add_user() {
@@ -8054,7 +10410,7 @@ FIREFOX_DESKTOP
 }
 
 desktop_applications() {
-    [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox ]] || return 0
+    [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == cinnamon ]] || return 0
     [[ "$DESKTOP_CHOICE" == mate ]] && step "desktop-app-geany-$PKG_GEANY" geany_application
     step "desktop-app-firefox-$PKG_FIREFOX" firefox_application
 }
@@ -8096,7 +10452,9 @@ network_tools() {
     [[ -f "$ROOT/usr/bin/ping" && -f "$ROOT/usr/bin/ping6" ]] || die "$(tr_text 'Missing ping / ping6' 'Trūksta ping / ping6')"
     # Raw ICMP socket reikia teisių; inetutils po socket sukūrimo jas sumažina.
     # Archyve fakeroot priskiria root savininką, todėl ping veikia paprastam vartotojui.
-    chmod 4755 "$ROOT/usr/bin/ping" "$ROOT/usr/bin/ping6"
+    chmod 0755 "$ROOT/usr/bin/ping" "$ROOT/usr/bin/ping6"
+    grep -q '^net.ipv4.ping_group_range' "$ROOT/etc/sysctl.d/90-hardening.conf" ||
+        printf 'net.ipv4.ping_group_range = 0 2147483647\n' >> "$ROOT/etc/sysctl.d/90-hardening.conf"
     # getprotobyname() skaito šį failą; GNU ping be jo neatpažįsta ICMP.
     if [[ ! -s "$ROOT/etc/protocols" ]]; then
         cat > "$ROOT/etc/protocols" <<'PROTOCOLS'
@@ -8128,6 +10486,7 @@ userland() {
     autotools ncurses --with-shared --enable-widec --without-debug --without-ada \
         --without-cxx-binding --enable-pc-files --with-pkg-config-libdir=/usr/lib/pkgconfig \
         --with-build-cc="$HOST_CC" --disable-stripping
+    autotools dialog --with-ncursesw --disable-rpath
     ln -snf libncursesw.so "$ROOT/usr/lib/libncurses.so"
     ln -snf ncursesw.pc "$ROOT/usr/lib/pkgconfig/ncurses.pc"
     if needs_busybox; then
@@ -8308,6 +10667,11 @@ cd / || exit 1
 hostname -F /etc/hostname
 mkdir -p /dev/pts
 mount -a
+# Apply the keymap selected by the installer from the persistent overlay.
+if [ -r /etc/vconsole.conf ]; then
+    . /etc/vconsole.conf
+    [ -z "${KEYMAP:-}" ] || loadkeys "$KEYMAP" 2>/dev/null || :
+fi
 # mount -a cannot mount devpts unless its mountpoint exists. Unix98 PTYs
 # are required by xterm, terminal emulators, ssh, and other pseudo terminals.
 if ! grep -q ' /dev/pts devpts ' /proc/mounts; then
@@ -8315,9 +10679,31 @@ if ! grep -q ' /dev/pts devpts ' /proc/mounts; then
 fi
 ip link set lo up
 ip addr replace 127.0.0.1/8 dev lo
-mkdir -p /run/lock /run/dhcpcd
+mkdir -p /run/lock /run/dhcpcd /run/dbus
+chmod 0755 /run/dbus
 : > /run/utmp
 BOOT
+    cat >> "$ROOT/etc/diy/boot" <<'SYSCTL_BOOT'
+if command -v sysctl >/dev/null 2>&1; then sysctl --system >/dev/null 2>&1 || :; fi
+SYSCTL_BOOT
+    mkdir -p "$ROOT/etc/sysctl.d"
+    cat > "$ROOT/etc/sysctl.d/90-hardening.conf" <<'SYSCTL_HARDENING'
+kernel.kptr_restrict = 2
+kernel.dmesg_restrict = 1
+kernel.unprivileged_bpf_disabled = 1
+fs.protected_symlinks = 1
+fs.protected_hardlinks = 1
+fs.protected_fifos = 2
+fs.protected_regular = 2
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv6.conf.all.accept_redirects = 0
+SYSCTL_HARDENING
+    if [[ "$PKG_PING" == yes ]]; then
+        grep -q '^net.ipv4.ping_group_range' "$ROOT/etc/sysctl.d/90-hardening.conf" ||
+            printf 'net.ipv4.ping_group_range = 0 2147483647\n' >> "$ROOT/etc/sysctl.d/90-hardening.conf"
+    fi
     # DHCP logs on the same tty as getty can hide the login prompt. SysVinit
     # starts its boot script before respawn services, so daemonize quietly here
     # and keep diagnostics in the system log instead of inittab's console.
@@ -8388,10 +10774,19 @@ depends-on: diy-boot
 DINIT_ELOGIND
         fi
         if [[ "$needs_desktop_auth" == yes ]]; then
+            cat > "$ROOT/etc/dinit.d/dbus" <<'DINIT_DBUS'
+type = process
+command = /usr/bin/dbus-daemon --system --nofork --nopidfile
+restart = true
+depends-on: diy-boot
+DINIT_DBUS
             cat > "$ROOT/etc/dinit.d/polkit" <<'DINIT_POLKIT'
 type = process
 command = /usr/lib/polkit-1/polkitd --no-debug --log-level=notice
+run-as = polkitd
 restart = true
+depends-on: diy-boot
+depends-on: dbus
 depends-on: elogind
 DINIT_POLKIT
         fi
@@ -8423,13 +10818,32 @@ DINIT_BOOT
             printf 'depends-on: elogind\n' >> "$ROOT/etc/dinit.d/boot"
         fi
         if [[ "$needs_desktop_auth" == yes ]]; then
-            printf 'depends-on: polkit\n' >> "$ROOT/etc/dinit.d/boot"
+            printf 'depends-on: dbus\ndepends-on: polkit\n' >> "$ROOT/etc/dinit.d/boot"
         fi
         if [[ "$upower_enabled" == yes ]]; then
             printf 'depends-on: upower\n' >> "$ROOT/etc/dinit.d/boot"
         fi
         if [[ ${PKG_MATE_CONTROL_CENTER:-no} == yes ]]; then
             printf 'depends-on: udisks2\n' >> "$ROOT/etc/dinit.d/boot"
+        fi
+        # Temporary QEMU validation profile: run the log forwarder as root so
+        # the unprivileged Cinnamon session can report GLX errors on ttyS0.
+        # It is omitted from normal profiles, where AUTOLOGIN remains disabled.
+        if [[ "$DESKTOP_CHOICE" == cinnamon && "$AUTOLOGIN" == yes ]]; then
+            cat > "$ROOT/usr/libexec/diy-cinnamon-log-forwarder" <<EOF
+#!/bin/sh
+tail -n 0 -F /home/$USER_NAME/.local/state/diy-linux/cinnamon-session.log /var/log/Xorg.0.log | while IFS= read -r line; do
+    [ ! -c /dev/ttyS0 ] || printf '%s\n' "\$line" >/dev/ttyS0
+done
+EOF
+            chmod 0755 "$ROOT/usr/libexec/diy-cinnamon-log-forwarder"
+            cat > "$ROOT/etc/dinit.d/cinnamon-log-forwarder" <<'DINIT_CINNAMON_LOG'
+type = process
+command = /usr/libexec/diy-cinnamon-log-forwarder
+restart = true
+depends-on: diy-boot
+DINIT_CINNAMON_LOG
+            printf 'depends-on: cinnamon-log-forwarder\n' >> "$ROOT/etc/dinit.d/boot"
         fi
         cat > "$ROOT/etc/dinit.d/diy-boot" <<'DINIT_BOOT_SETUP'
 type = scripted
@@ -8543,7 +10957,7 @@ S6_INIT_WRAPPER
         directory="$ROOT/etc/service"
         mkdir -p "$directory" "$ROOT/etc/runit"
         printf '#!/bin/sh\ncd / || exit 1\n/etc/diy/boot\ntouch /etc/runit/stopit\nchmod 000 /etc/runit/stopit\n' > "$ROOT/etc/runit/1"
-        printf '#!/bin/sh\nexec /usr/bin/runsvdir /etc/service\n' > "$ROOT/etc/runit/2"
+        printf '#!/bin/sh\ncd / || exit 1\nexec /usr/bin/runsvdir /etc/service\n' > "$ROOT/etc/runit/2"
         printf '#!/bin/sh\n# PID 1 vykdo galutinį reboot syscall po šio etapo.\nsync\numount -a -r 2>/dev/null || :\n' > "$ROOT/etc/runit/3"
         chmod 0755 "$ROOT/etc/runit/"[123]
         printf '#!/bin/sh\nexec /sbin/runit-init 6\n' > "$ROOT/usr/sbin/reboot"
@@ -8561,6 +10975,20 @@ S6_INIT_WRAPPER
         chmod 0755 "$directory/$port/run"
         [[ "$INIT_CHOICE" != s6 ]] || printf '5000\n' > "$directory/$port/timeout-kill"
     done
+    if [[ "$INIT_CHOICE" == runit && "$DESKTOP_CHOICE" == cinnamon ]]; then
+        mkdir -p "$directory/cinnamon-log-forwarder" "$ROOT/usr/libexec"
+        cat > "$ROOT/usr/libexec/diy-cinnamon-log-forwarder" <<EOF
+#!/bin/sh
+tail -n 0 -F /home/$USER_NAME/.local/state/diy-linux/cinnamon-session.log /var/log/Xorg.0.log 2>/dev/null |
+while IFS= read -r line; do
+    [ ! -c /dev/ttyS0 ] || printf '[cinnamon] %s\n' "\$line" >/dev/ttyS0
+done
+EOF
+        chmod 0755 "$ROOT/usr/libexec/diy-cinnamon-log-forwarder"
+        printf '#!/bin/sh\nexec /usr/libexec/diy-cinnamon-log-forwarder\n' \
+            > "$directory/cinnamon-log-forwarder/run"
+        chmod 0755 "$directory/cinnamon-log-forwarder/run"
+    fi
     if [[ "$NETWORK" == yes && "$DESKTOP_CHOICE" == none ]]; then
         mkdir -p "$directory/dhcpcd"
         printf '#!/bin/sh\nexec /usr/sbin/dhcpcd --nobackground\n' > "$directory/dhcpcd/run"
@@ -8918,7 +11346,20 @@ PRELOGIN
     chmod 0755 "$ROOT/usr/libexec/diy-prelogin"
     cat > "$ROOT/etc/profile" <<'PROFILE'
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin
-export LANG=C.UTF-8
+# Recover shells whose inherited working directory was removed or detached.
+if ! pwd -P >/dev/null 2>&1; then
+    cd "${HOME:-/}" 2>/dev/null || cd /
+fi
+if [ -r /etc/locale.conf ]; then
+    . /etc/locale.conf
+else
+    LANG=C.UTF-8
+fi
+export LANG
+if [ -r /etc/timezone ]; then
+    TZ=$(cat /etc/timezone)
+    export TZ
+fi
 umask 022
 if [ -z "${DIY_WELCOME_SHOWN:-}" ]; then
     export DIY_WELCOME_SHOWN=1
@@ -8939,9 +11380,32 @@ PROFILE
     fi
     cat > "$ROOT/etc/skel/.bashrc" <<'BASHRC'
 # Interactive prompt: account name, system hostname, and current directory.
-case $- in *i*) PS1='\u@\h:\w\$ ' ;; esac
+case $- in
+    *i*)
+        # Recover if the parent process left this shell in a removed cwd.
+        if ! pwd -P >/dev/null 2>&1; then
+            cd "${HOME:-/}" 2>/dev/null || cd /
+        fi
+        PS1='\u@\h:\w\$ '
+        ;;
+esac
 BASHRC
     install -m0644 "$ROOT/etc/skel/.bashrc" "$ROOT/root/.bashrc"
+    # Existing default users do not get refreshed from /etc/skel, so add the
+    # invalid-cwd recovery to their current interactive Bash config once.
+    if [[ -n "${USER_NAME:-}" && -f "$ROOT/home/$USER_NAME/.bashrc" ]] &&
+       ! grep -Fq '# DIY detached-cwd recovery' "$ROOT/home/$USER_NAME/.bashrc"; then
+        cat >> "$ROOT/home/$USER_NAME/.bashrc" <<'BASHRC_CWD_RECOVERY'
+# DIY detached-cwd recovery
+case $- in
+    *i*)
+        if ! pwd -P >/dev/null 2>&1; then
+            cd "${HOME:-/}" 2>/dev/null || cd /
+        fi
+        ;;
+esac
+BASHRC_CWD_RECOVERY
+    fi
 }
 
 ensure_nginx_account() {
@@ -9010,11 +11474,17 @@ HostKey /etc/ssh/ssh_host_ecdsa_key
 HostKey /etc/ssh/ssh_host_rsa_key
 PermitRootLogin no
 AllowUsers $USER_NAME
-PasswordAuthentication yes
+PasswordAuthentication no
 PermitEmptyPasswords no
 PubkeyAuthentication yes
 KbdInteractiveAuthentication no
 UsePAM no
+MaxAuthTries 3
+LoginGraceTime 20
+X11Forwarding no
+AllowTcpForwarding no
+ClientAliveInterval 300
+ClientAliveCountMax 2
 StrictModes yes
 PidFile /run/sshd.pid
 Subsystem sftp internal-sftp
@@ -9125,7 +11595,7 @@ configure_web_services() {
     mkdir -p "$ROOT/etc/nginx" "$ROOT/etc/php-fpm.d" "$ROOT/var/log/nginx" \
         "$ROOT/var/lib/nginx/client_temp" "$ROOT/var/lib/nginx/proxy_temp" \
         "$ROOT/var/lib/nginx/fastcgi_temp" "$ROOT/run/lock" "$ROOT/srv/www/html" "$ROOT/usr/libexec"
-    chmod 1777 "$ROOT/var/lib/nginx/client_temp" "$ROOT/var/lib/nginx/proxy_temp" \
+    chmod 0700 "$ROOT/var/lib/nginx/client_temp" "$ROOT/var/lib/nginx/proxy_temp" \
         "$ROOT/var/lib/nginx/fastcgi_temp"
     cat > "$ROOT/etc/nginx/nginx.conf" <<'NGINX_CONFIG'
 user nginx nginx;
@@ -9217,7 +11687,7 @@ pidfile=/run/nginx.pid
 depend() { need localmount; }
 start_pre() {
     checkpath --directory --mode 0755 /var/log/nginx /var/lib/nginx /run/lock
-    checkpath --directory --mode 1777 /var/lib/nginx/client_temp /var/lib/nginx/proxy_temp /var/lib/nginx/fastcgi_temp
+    checkpath --directory --owner nginx:nginx --mode 0700 /var/lib/nginx/client_temp /var/lib/nginx/proxy_temp /var/lib/nginx/fastcgi_temp
 }
 OPENRC_NGINX
             if [[ "$PKG_PHP" == yes ]]; then
@@ -9249,7 +11719,8 @@ After=network.target local-fs.target
 [Service]
 Type=simple
 ExecStartPre=/usr/bin/mkdir -p /var/log/nginx /var/lib/nginx /run/lock /var/lib/nginx/client_temp /var/lib/nginx/proxy_temp /var/lib/nginx/fastcgi_temp
-ExecStartPre=/usr/bin/chmod 1777 /var/lib/nginx/client_temp /var/lib/nginx/proxy_temp /var/lib/nginx/fastcgi_temp
+ExecStartPre=/usr/bin/chown nginx:nginx /var/lib/nginx/client_temp /var/lib/nginx/proxy_temp /var/lib/nginx/fastcgi_temp
+ExecStartPre=/usr/bin/chmod 0700 /var/lib/nginx/client_temp /var/lib/nginx/proxy_temp /var/lib/nginx/fastcgi_temp
 ExecStart=/usr/sbin/nginx -g "daemon off;" -c /etc/nginx/nginx.conf
 ExecReload=/usr/sbin/nginx -s reload
 Restart=on-failure
@@ -9267,7 +11738,8 @@ SYSTEMD_NGINX
 #!/bin/sh
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin
 mkdir -p /var/log/nginx /var/lib/nginx /run/lock /var/lib/nginx/client_temp /var/lib/nginx/proxy_temp /var/lib/nginx/fastcgi_temp
-chmod 1777 /var/lib/nginx/client_temp /var/lib/nginx/proxy_temp /var/lib/nginx/fastcgi_temp
+chown nginx:nginx /var/lib/nginx/client_temp /var/lib/nginx/proxy_temp /var/lib/nginx/fastcgi_temp
+chmod 0700 /var/lib/nginx/client_temp /var/lib/nginx/proxy_temp /var/lib/nginx/fastcgi_temp
 if [ -x /usr/sbin/php-fpm ]; then
     /usr/sbin/php-fpm --nodaemonize --fpm-config /etc/php-fpm.conf >>/var/log/php-fpm.log 2>&1 &
     i=0
@@ -9281,16 +11753,61 @@ WEB_BOOT
     esac
 }
 
+compile_linux_installer() {
+    local source_dir build_dir binary
+    [[ "$TARGET_ARCH" == x86_64 ]] || return 0
+    source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/linux-installer" && pwd -P) ||
+        die "$(tr_text 'LinuxInstaller source directory is missing beside diy-linux.sh' 'Šalia diy-linux.sh nerastas LinuxInstaller šaltinio katalogas')"
+    [[ -s "$source_dir/main.cpp" && -s "$source_dir/scripts/install-system.sh" && \
+       -s "$source_dir/scripts/system-config.sh" ]] ||
+        die "$(tr_text 'LinuxInstaller source files are incomplete' 'LinuxInstaller šaltinio failų trūksta')"
+    build_dir="$BUILD/linux-installer"
+    binary="$build_dir/linux-installer"
+    mkdir -p "$build_dir"
+    "$CXX" -std=c++17 -O2 -pipe -Wall -Wextra -Wpedantic \
+        -static-libstdc++ -static-libgcc \
+        -I"$ROOT/usr/include" -I"$SDK/sysroot/usr/include" \
+        "$source_dir/main.cpp" \
+        -L"$ROOT/usr/lib" -Wl,-rpath-link,"$ROOT/usr/lib" \
+        -lncursesw -o "$binary"
+    install -Dm0755 "$binary" "$ROOT/usr/bin/linux-installer"
+    ln -sfn linux-installer "$ROOT/usr/bin/LinuxInstaller"
+    install -Dm0755 "$source_dir/scripts/install-system.sh" \
+        "$ROOT/usr/libexec/diy-installer/scripts/install-system.sh"
+    install -Dm0644 "$source_dir/scripts/system-config.sh" \
+        "$ROOT/usr/libexec/diy-installer/scripts/system-config.sh"
+    install -Dm0644 "$source_dir/README.md" \
+        "$ROOT/usr/share/doc/diy-linux-installer/README.md"
+}
+
 configure_system() {
     local tty1_getty serial_getty getty_path getty_args dhcpcd_uid tty_gid
     local needs_desktop_auth=no upower_enabled=no
-    [[ ${DESKTOP_CHOICE:-none} != mate && \
+    [[ ${DESKTOP_CHOICE:-none} != mate && ${DESKTOP_CHOICE:-none} != cinnamon && \
        ${PKG_MATE_CONTROL_CENTER:-no} != yes && \
        ${PKG_MATE_POWER_MANAGER:-no} != yes ]] || needs_desktop_auth=yes
-    [[ ${DESKTOP_CHOICE:-none} != mate && ${PKG_FIREFOX:-no} != yes ]] || upower_enabled=yes
+    [[ ${DESKTOP_CHOICE:-none} != mate && ${DESKTOP_CHOICE:-none} != cinnamon && ${PKG_FIREFOX:-no} != yes ]] || upower_enabled=yes
     mkdir -p "$ROOT/etc" "$ROOT/dev" "$ROOT/proc" "$ROOT/sys" "$ROOT/run" \
         "$ROOT/tmp" "$ROOT/root" "$ROOT/home" "$ROOT/var/log" "$ROOT/var/run"
     chmod 1777 "$ROOT/tmp"
+    mkdir -p "$ROOT/etc/sysctl.d"
+    cat > "$ROOT/etc/sysctl.d/90-hardening.conf" <<'SYSCTL_HARDENING'
+kernel.kptr_restrict = 2
+kernel.dmesg_restrict = 1
+kernel.unprivileged_bpf_disabled = 1
+fs.protected_symlinks = 1
+fs.protected_hardlinks = 1
+fs.protected_fifos = 2
+fs.protected_regular = 2
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv6.conf.all.accept_redirects = 0
+SYSCTL_HARDENING
+    if [[ "$PKG_PING" == yes ]]; then
+        grep -q '^net.ipv4.ping_group_range' "$ROOT/etc/sysctl.d/90-hardening.conf" ||
+            printf 'net.ipv4.ping_group_range = 0 2147483647\n' >> "$ROOT/etc/sysctl.d/90-hardening.conf"
+    fi
     configure_timezone
     if [[ "$INIT_CHOICE" == systemd ]]; then
         # D-Bus defaults to the unprivileged messagebus account. Console-only
@@ -9369,6 +11886,11 @@ ip addr replace 127.0.0.1/8 dev lo 2>/dev/null || :
 mkdir -p /run/lock /run/dhcpcd
 : > /run/utmp
 COMMON_BOOT
+    # /etc/sysctl.d is generated with the base system. Apply it after proc/sys
+    # have been mounted, including when using non-systemd init systems.
+    cat >> "$ROOT/etc/diy/boot" <<'SYSCTL_BOOT'
+if command -v sysctl >/dev/null 2>&1; then sysctl --system >/dev/null 2>&1 || :; fi
+SYSCTL_BOOT
     chmod 0755 "$ROOT/etc/diy/boot"
     sed -i "s/gid=5/gid=$tty_gid/g" "$ROOT/etc/diy/boot"
     if [[ "$INIT_CHOICE" == busybox && "$NETWORK" == yes && "$DESKTOP_CHOICE" == none ]]; then
@@ -9424,6 +11946,15 @@ start() {
 LOOPBACK_SERVICE
         chmod 0755 "$ROOT/etc/init.d/diy-loopback"
         ln -snf /etc/init.d/diy-loopback "$ROOT/etc/runlevels/boot/diy-loopback"
+        cat > "$ROOT/etc/init.d/diy-sysctl" <<'OPENRC_SYSCTL'
+#!/sbin/openrc-run
+description="Apply kernel sysctl settings"
+command=/usr/sbin/sysctl
+command_args=--system
+depend() { need localmount; before net; }
+OPENRC_SYSCTL
+        chmod 0755 "$ROOT/etc/init.d/diy-sysctl"
+        ln -snf /etc/init.d/diy-sysctl "$ROOT/etc/runlevels/boot/diy-sysctl"
         if [[ "$TOOLS_CHOICE" == gnu ]]; then
             for service in tty1 ttyS0; do
                 ln -snf agetty "$ROOT/etc/init.d/agetty.$service"
@@ -9475,12 +12006,13 @@ DHCP_SERVICE
             ln -snf /etc/init.d/dhcpcd "$ROOT/etc/runlevels/default/dhcpcd"
         fi
     elif [[ "$INIT_CHOICE" == systemd ]]; then
-        mkdir -p "$ROOT/etc/systemd/system/multi-user.target.wants" "$ROOT/etc/systemd/system/getty.target.wants"
+        mkdir -p "$ROOT/etc/systemd/system/multi-user.target.wants" "$ROOT/etc/systemd/system/getty.target.wants" "$ROOT/etc/systemd/system/sysinit.target.wants"
         # The image is configured during its build (hostname, users, and
         # credentials). systemd-firstboot would otherwise open an interactive
         # wizard on the boot console and appear to hang the first boot.
         ln -snf /dev/null "$ROOT/etc/systemd/system/systemd-firstboot.service"
         ln -snf /usr/lib/systemd/system/multi-user.target "$ROOT/etc/systemd/system/default.target"
+        ln -snf /usr/lib/systemd/system/systemd-sysctl.service "$ROOT/etc/systemd/system/sysinit.target.wants/systemd-sysctl.service"
         ln -snf /usr/lib/systemd/system/getty@.service "$ROOT/etc/systemd/system/getty.target.wants/getty@tty1.service"
         if [[ "$AUTOLOGIN" == yes ]]; then
             mkdir -p "$ROOT/etc/systemd/system/getty@tty1.service.d"
@@ -9562,7 +12094,11 @@ kernel() {
         SQUASHFS SQUASHFS_ZSTD OVERLAY_FS; do
         "$source/scripts/config" --file "$BUILD/linux/.config" --enable "$option"
     done
-    if [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox ]]; then
+    for option in STACKPROTECTOR_STRONG HARDENED_USERCOPY FORTIFY_SOURCE RANDOMIZE_BASE \
+        STRICT_DEVMEM SECURITY_YAMA; do
+        "$source/scripts/config" --file "$BUILD/linux/.config" --enable "$option"
+    done
+    if [[ "$DESKTOP_CHOICE" == x11 || "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == cinnamon ]]; then
         for option in VT VT_CONSOLE INPUT INPUT_EVDEV INPUT_KEYBOARD INPUT_MOUSE SERIO SERIO_I8042 \
             KEYBOARD_ATKBD MOUSE_PS2 HID HID_GENERIC USB_HID USB USB_XHCI_HCD USB_EHCI_HCD USB_UHCI_HCD \
             DRM DRM_BOCHS DRM_VIRTIO_GPU DRM_SIMPLEDRM SYSFB_SIMPLEFB DRM_FBDEV_EMULATION \
@@ -9577,11 +12113,16 @@ kernel() {
     fi
     # Only desktop builds need the broad graphics/audio module set. Keeping
     # these out of console kernels reduces compilation time and module size.
-    if [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox ]]; then
+    if [[ "$DESKTOP_CHOICE" == x11 || "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == cinnamon ]]; then
         for option in DRM SND SND_PCM SND_SOC SND_SOC_SOF_INTEL_TOPLEVEL; do
             "$source/scripts/config" --file "$BUILD/linux/.config" --enable "$option"
         done
+        # Broad kernel DRM coverage: AMD/Intel/NVIDIA plus common workstation,
+        # server, embedded and virtual display adapters. udev loads only the
+        # module whose PCI modalias matches the machine's actual hardware.
+        "$source/scripts/config" --file "$BUILD/linux/.config" --enable HYPERV
         for option in DRM_AMDGPU DRM_RADEON DRM_I915 DRM_XE DRM_NOUVEAU DRM_VMWGFX DRM_QXL DRM_VBOXVIDEO \
+            DRM_AST DRM_MGAG200 DRM_CIRRUS_QEMU DRM_GMA500 HYPERV_VMBUS DRM_HYPERV \
             SND_HDA_INTEL SND_HDA_CODEC_REALTEK SND_HDA_CODEC_HDMI SND_HDA_GENERIC \
             SND_HDA_CODEC_CIRRUS SND_HDA_CODEC_CONEXANT SND_HDA_CODEC_SIGMATEL SND_HDA_CODEC_VIA \
             SND_USB_AUDIO SND_INTEL8X0 SND_INTEL8X0M SND_EMU10K1 SND_ENS1370 \
@@ -9633,18 +12174,47 @@ kernel() {
     kernel_make -C "$source" O="$BUILD/linux" ARCH="$KERNEL_ARCH" CROSS_COMPILE="$TARGET-" olddefconfig
     local required_option
     local -a required_kernel_options=(BLK_DEV_INITRD RD_ZSTD DEVTMPFS DEVTMPFS_MOUNT TMPFS UNIX98_PTYS CGROUPS NAMESPACES \
+        STACKPROTECTOR_STRONG HARDENED_USERCOPY FORTIFY_SOURCE RANDOMIZE_BASE STRICT_DEVMEM SECURITY_YAMA \
         UNIX INET VIRTIO VIRTIO_PCI VIRTIO_BLK BLK_DEV_LOOP BLK_DEV_SR BLK_DEV_SD SCSI SCSI_VIRTIO \
         EXT4_FS ISO9660_FS SQUASHFS SQUASHFS_ZSTD OVERLAY_FS)
     if [[ "$KERNEL_ARCH" == arm64 ]]; then
         required_kernel_options+=(PCI_HOST_GENERIC SERIAL_AMBA_PL011 SERIAL_AMBA_PL011_CONSOLE)
     fi
+    if [[ "$DESKTOP_CHOICE" == x11 || "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde ||           "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == cinnamon ]]; then
+        local graphics_option graphics_module graphics_release
+        # Require the mainstream discrete/integrated and VM drivers that
+        # this x86_64 profile can build. Optional server/legacy adapters have
+        # additional kernel-specific dependencies and must not make every
+        # desktop build fail when Kconfig correctly leaves them disabled.
+        local -a required_graphics_options=(
+            DRM_AMDGPU DRM_RADEON DRM_I915 DRM_XE DRM_NOUVEAU DRM_VMWGFX
+            DRM_QXL DRM_VBOXVIDEO
+        )
+        for graphics_option in "${required_graphics_options[@]}"; do
+            grep -qx "CONFIG_${graphics_option}=m" "$BUILD/linux/.config" ||
+                die "$(tr_text "Kernel omitted required graphics module CONFIG_${graphics_option}=m" "Branduolyje trūksta būtino grafikos modulio CONFIG_${graphics_option}=m")"
+        done
+    fi
     for required_option in "${required_kernel_options[@]}"; do
         grep -qx "CONFIG_${required_option}=y" "$BUILD/linux/.config" ||
             die "$(tr_text "Kernel configuration did not enable required CONFIG_${required_option}=y" "Branduolio konfigūracija neįjungė būtino CONFIG_${required_option}=y")"
     done
+    for required_option in STACKPROTECTOR_STRONG HARDENED_USERCOPY FORTIFY_SOURCE RANDOMIZE_BASE STRICT_DEVMEM SECURITY_YAMA; do
+        grep -qx "CONFIG_${required_option}=y" "$BUILD/linux/.config" ||
+            die "$(tr_text "Kernel hardening option was unavailable: CONFIG_${required_option}" "Branduolio saugumo parinktis nepasiekiama: CONFIG_${required_option}")"
+    done
     kernel_make -C "$source" O="$BUILD/linux" ARCH="$KERNEL_ARCH" CROSS_COMPILE="$TARGET-" -j"$JOBS"
     kernel_make -C "$source" O="$BUILD/linux" ARCH="$KERNEL_ARCH" CROSS_COMPILE="$TARGET-" \
         INSTALL_MOD_PATH="$ROOT" DEPMOD="$(command -v depmod)" modules_install
+    if [[ "$DESKTOP_CHOICE" == x11 || "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || \
+          "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == cinnamon ]]; then
+        graphics_release=$(kernel_make -s -C "$source" O="$BUILD/linux" ARCH="$KERNEL_ARCH" kernelrelease)
+        for graphics_module in amdgpu radeon i915 xe nouveau vmwgfx qxl vboxvideo; do
+            [[ -n $(find "$ROOT/lib/modules/$graphics_release" -type f \
+                -name "$graphics_module.ko" -print -quit 2>/dev/null) ]] ||
+                die "Kernel graphics module missing from rootfs after modules_install: $graphics_module"
+        done
+    fi
     install -m0644 "$BUILD/linux/$KERNEL_IMAGE" "$ROOT/boot/bzImage"
     install -m0644 "$BUILD/linux/$KERNEL_IMAGE" "$IMAGES/bzImage"
     install -m0644 "$BUILD/linux/.config" "$ROOT/boot/kernel.config"
@@ -9773,6 +12343,8 @@ strip_elf() {
 create_lilo_image() {
     local temporary caller_uid caller_gid lilo_label
     local lilo_bin="$BASE/lilo-tools/sbin/lilo"
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    export PATH
     lilo_label=${OS_NAME//[ .-]/_}
     lilo_label=${lilo_label:0:15}
     [[ -x "$lilo_bin" ]] || die "$(tr_text 'LILO installer was not built' 'LILO diegiklis nesukompiliuotas')"
@@ -9795,6 +12367,9 @@ create_lilo_image() {
     # accidentally reads stdin must not consume the rest of this script.
     "${privilege[@]}" bash -c "$(cat <<'LILO_IMAGE_ROOT'
 set -Eeuo pipefail
+# sudo may replace PATH with a value that omits util-linux's sbin tools.
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
 temporary=$1 final=$2 kernel=$3 initramfs=$4 rootfs_image=$5 lilo_bin=$6 owner_uid=$7 owner_gid=$8 serial_tty=$9 lilo_label=${10}
 mount_dir=''; loopdev=''; partdev=''; config=''; created_disk_node=''; created_part_node=''
 cleanup() {
@@ -9950,24 +12525,31 @@ menuentry "$OS_NAME (Live)" {
 }
 GRUBCFG
             prepare_grub_font
-            # Locally built GRUB 2.14 can stop at firmware handoff on both
-            # SeaBIOS and OVMF. Prefer the host's tested GRUB for x86_64 ISO
-            # images; retain the profile-local tools as fallback elsewhere.
-            if [[ "$TARGET_ARCH" == x86_64 ]] &&
-               command -v grub-mkrescue >/dev/null 2>&1; then
-                if ! grub-mkrescue --fonts='' --themes='' \
-                    --label-font="$BASE/grub-tools/share/grub/unicode.pf2" \
-                    -o "$IMAGES/$SYSTEM_NAME.iso" "$iso"; then
-                    rm -f "$IMAGES/$SYSTEM_NAME.iso"
-                    "$BASE/grub-tools/bin/grub-mkrescue" --fonts='' --themes='' \
-                        --label-font="$BASE/grub-tools/share/grub/unicode.pf2" \
-                        -o "$IMAGES/$SYSTEM_NAME.iso" "$iso"
-                fi
-            else
-                "$BASE/grub-tools/bin/grub-mkrescue" --fonts='' --themes='' \
-                    --label-font="$BASE/grub-tools/share/grub/unicode.pf2" \
-                    -o "$IMAGES/$SYSTEM_NAME.iso" "$iso"
+            local grub_platform
+            case "$BOOT_CHOICE:$TARGET_ARCH" in
+                bios:x86_64|uefi:x86_64)
+                    # x86_64 media should boot on both legacy BIOS and UEFI,
+                    # independent of which GRUB target was selected to build
+                    # the profile. grub_tools installs both targets together.
+                    for grub_platform in i386-pc x86_64-efi; do
+                        [[ -d "$BASE/grub-tools/lib/grub/$grub_platform" ]] ||
+                            die "Profile GRUB modules missing for $grub_platform; rebuild the profile's boot-tools stage"
+                    done
+                    ;;
+                bios:i686) grub_platform=i386-pc ;;
+                uefi:i686) grub_platform=i386-efi ;;
+                uefi:aarch64) grub_platform=arm64-efi ;;
+                *) die "Unsupported GRUB firmware target: $BOOT_CHOICE / $TARGET_ARCH" ;;
+            esac
+            if [[ "$TARGET_ARCH" != x86_64 ]]; then
+                [[ -d "$BASE/grub-tools/lib/grub/$grub_platform" ]] ||
+                    die "Profile GRUB modules missing for $grub_platform; refusing to create a mismatched ISO"
             fi
+            # Always use this profile's GRUB binary and modules. Host
+            # grub-mkrescue may silently produce a UEFI ISO for a BIOS profile.
+            PATH="$BASE/grub-tools/bin:$PATH" "$BASE/grub-tools/bin/grub-mkrescue" --fonts='' --themes='' \
+                --label-font="$BASE/grub-tools/share/grub/unicode.pf2" \
+                -o "$IMAGES/$SYSTEM_NAME.iso" "$iso"
             ;;
         syslinux)
             source="$SOURCES/syslinux-${VERSION[syslinux]}"
@@ -10064,21 +12646,37 @@ fi
 [ ! -c /dev/rfkill ] || chmod 0644 /dev/rfkill 2>/dev/null || :
 mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run 2>/dev/null || :
 mkdir -p /run/media /run/lower /run/upper /run/work /newroot
+PERSISTENT_OVERLAY=no
 shopt -s nullglob
 start_live_root() {
-    mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run/upper || return 1
-    mkdir -p /run/upper/upper /run/upper/work
-    if ! mount -t overlay overlay -o lowerdir=/run/lower,upperdir=/run/upper/upper,workdir=/run/upper/work /newroot; then
-        umount /run/upper 2>/dev/null || :
+    if [[ "$PERSISTENT_OVERLAY" == yes ]]; then
+        mkdir -p /run/media/var/lib/diy-overlay/upper /run/media/var/lib/diy-overlay/work || return 1
+        upper=/run/media/var/lib/diy-overlay/upper
+        work=/run/media/var/lib/diy-overlay/work
+    else
+        mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run/upper || return 1
+        mkdir -p /run/upper/upper /run/upper/work
+        upper=/run/upper/upper
+        work=/run/upper/work
+    fi
+    if ! mount -t overlay overlay -o lowerdir=/run/lower,upperdir=$upper,workdir=$work /newroot; then
+        [[ "$PERSISTENT_OVERLAY" == yes ]] || umount /run/upper 2>/dev/null || :
         umount /run/lower 2>/dev/null || :
         return 1
     fi
-    printf '%s\n' 'DIY Linux: live changes use RAM and are discarded at shutdown.' > /dev/console
+    if [[ "$PERSISTENT_OVERLAY" == yes ]]; then
+        printf '%s\n' 'DIY Linux: persistent disk installation is active.' > /dev/console
+    else
+        printf '%s\n' 'DIY Linux: live changes use RAM and are discarded at shutdown.' > /dev/console
+    fi
     mkdir -p /newroot/dev /newroot/proc /newroot/sys /newroot/run
     mount --move /dev /newroot/dev || return 1
     mount --move /proc /newroot/proc || return 1
     mount --move /sys /newroot/sys || return 1
     mount --move /run /newroot/run || return 1
+    # switch_root removes the initramfs tree. Move PID 1 into the new root
+    # first so every init system inherits a valid working directory.
+    cd /newroot || return 1
     exec /usr/sbin/switch_root /newroot /init
 }
 for attempt in {1..30}; do
@@ -10087,11 +12685,13 @@ for attempt in {1..30}; do
         if mount -t squashfs -o ro "$device" /run/lower 2>/dev/null; then
             start_live_root || :
         fi
-        mount -o ro "$device" /run/media 2>/dev/null || continue
+        mount "$device" /run/media 2>/dev/null || continue
         for image in /run/media/boot/rootfs.squashfs /run/media/rootfs.squashfs; do
             [[ -s "$image" ]] || continue
             if ! mount -t squashfs -o loop,ro "$image" /run/lower 2>/dev/null; then continue; fi
+            [[ ! -e /run/media/boot/diy-persistent-overlay ]] || PERSISTENT_OVERLAY=yes
             start_live_root || :
+            PERSISTENT_OVERLAY=no
         done
         umount /run/media 2>/dev/null || :
     done
@@ -10174,6 +12774,18 @@ verify_desktop_network() {
             die "$(tr_text 'LXDE network applet must use the single XDG autostart path' 'LXDE tinklo programėlė turi naudoti vieną XDG automatinio paleidimo kelią')"
         grep -qx 'OnlyShowIn=LXDE;' "$ROOT/etc/xdg/autostart/nm-applet.desktop" ||
             die "$(tr_text 'NetworkManager applet is not enabled for the LXDE session' 'NetworkManager programėlė neįjungta LXDE sesijai')"
+    elif [[ "$DESKTOP_CHOICE" == cinnamon ]]; then
+        [[ -f "$ROOT/usr/share/cinnamon/applets/network@cinnamon.org/applet.js" && \
+           -f "$ROOT/usr/share/cinnamon/applets/sound@cinnamon.org/applet.js" ]] ||
+            die "$(tr_text 'Cinnamon network or sound panel applet is missing' 'Trūksta Cinnamon tinklo arba garso skydelio programėlės')"
+        local xsi_dir="$ROOT/usr/share/icons/hicolor/scalable/actions"
+        local xsi_status_dir="$ROOT/usr/share/icons/hicolor/scalable/status"
+        for icon in xsi-network-offline-symbolic.svg xsi-network-wired-symbolic.svg \
+                    xsi-network-wireless-connected-symbolic.svg xsi-audio-volume-muted-symbolic.svg \
+                    xsi-audio-volume-high-symbolic.svg xsi-microphone-sensitivity-muted-symbolic.svg; do
+            [[ -s "$xsi_dir/$icon" && -s "$xsi_status_dir/$icon" ]] ||
+                die "$(tr_text "Cinnamon XApp symbolic icon is missing: $icon" "Trūksta Cinnamon XApp simbolinės piktogramos: $icon")"
+        done
     else
         [[ -f "$ROOT/etc/xdg/autostart/nm-applet.desktop" ]] ||
             die "$(tr_text 'NetworkManager tray applet autostart is missing' 'Trūksta NetworkManager piktogramos automatinio paleidimo')"
@@ -10473,6 +13085,66 @@ verify_and_pack() {
         fi
     done < <(find "$ROOT/usr/bin" "$ROOT/usr/sbin" "$ROOT/usr/lib" -type f -print0)
     say "$(tr_text 'Packaging (fakeroot: root access is not needed)' 'Pakavimas (fakeroot: nereikia root teisių)')"
+    local installer_source_dir="$(dirname -- "${BASH_SOURCE[0]}")/void-installer-master"
+    if [[ -s "$installer_source_dir/installer.sh" && -s "$installer_source_dir/applets/98-install.sh" ]]; then
+        install -d "$ROOT/usr/libexec/diy-installer"
+        cp -a "$installer_source_dir/." "$ROOT/usr/libexec/diy-installer/"
+        install -d "$ROOT/usr/libexec/diy-installer/grub-tools"
+        if [[ -d "$BASE/grub-tools" ]]; then
+            cp -a "$BASE/grub-tools/." "$ROOT/usr/libexec/diy-installer/grub-tools/"
+        fi
+        printf '%s\n' "$BOOT_CHOICE" > "$ROOT/usr/libexec/diy-installer/boot-mode"
+        case "$BOOT_CHOICE" in
+            bios)
+                [[ -d "$ROOT/usr/libexec/diy-installer/grub-tools/lib/grub/i386-pc" ]] ||
+                    die "BIOS installer requires the profile-built i386-pc GRUB modules" ;;
+            uefi)
+                [[ -d "$ROOT/usr/libexec/diy-installer/grub-tools/lib/grub/x86_64-efi" ]] ||
+                    die "UEFI installer requires the profile-built x86_64-efi GRUB modules" ;;
+        esac
+        install -d "$ROOT/usr/bin"
+        cat > "$ROOT/usr/bin/diy-installer" <<'INSTALL_LAUNCHER'
+#!/bin/sh
+if [ "$(id -u)" -ne 0 ]; then
+    command -v sudo >/dev/null 2>&1 || { echo "Run the installer with root privileges (sudo)." >&2; exit 1; }
+    exec sudo /usr/bin/diy-installer "$@"
+fi
+cd /usr/libexec/diy-installer || exit 1
+exec /bin/sh ./installer.sh "$@"
+INSTALL_LAUNCHER
+        chmod 0755 "$ROOT/usr/bin/diy-installer"
+        # Put a clickable installer on the graphical user's desktop. This is
+        # part of rootfs.squashfs, so it is also present after installation.
+        if [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox ]]; then
+            install -d "$ROOT/home/$USER_NAME/Desktop"
+            cat > "$ROOT/home/$USER_NAME/Desktop/Install.sh.desktop" <<'INSTALL_DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Install.sh
+Comment=Install this system to a disk
+Exec=/usr/bin/diy-installer
+Icon=system-software-install
+Terminal=true
+Categories=System;
+INSTALL_DESKTOP
+            chmod 0755 "$ROOT/home/$USER_NAME/Desktop/Install.sh.desktop"
+        fi
+        # An older installer source tree may already exist in the live user's
+        # home directory. Keep its applets in sync and route either historical
+        # script name through the canonical launcher, which sets LIBDIR safely.
+        local legacy_installer_dir="$ROOT/home/$USER_NAME/void-installer-master"
+        if [[ -d "$legacy_installer_dir" && ! -L "$legacy_installer_dir" ]]; then
+            cp -a "$installer_source_dir/." "$legacy_installer_dir/"
+            cat > "$legacy_installer_dir/installer.sh" <<'LEGACY_INSTALLER_LAUNCHER'
+#!/bin/sh
+exec /usr/bin/diy-installer "$@"
+LEGACY_INSTALLER_LAUNCHER
+            chmod 0755 "$legacy_installer_dir/installer.sh"
+            ln -sfn installer.sh "$legacy_installer_dir/install.sh"
+        fi
+    else
+        say "$(tr_text 'DIY installer sources not found beside the builder; installer will not be included.' 'Šalia kūrimo scenarijaus nerastas DIY diegiklis, todėl jis nebus įtrauktas.')"
+    fi
     build_live_initramfs
     FAKEROOTDONTTRYCHOWN=1 fakeroot bash -Eeuo pipefail -c '
         root=$1; images=$2; package_manager=$3; user_name=$4; early=$5; jobs=$6; dhcpcd_uid=$7; keep_tar=$8
@@ -10494,6 +13166,16 @@ verify_and_pack() {
                 echo "MATE datetime helper must be root-owned and setuid" >&2
                 exit 1
             }
+        fi
+        if [[ -x usr/lib/polkit-1/polkitd ]]; then
+            polkitd_uid=$(grep "^polkitd:" etc/passwd | cut -d: -f3)
+            polkitd_gid=$(grep "^polkitd:" etc/group | cut -d: -f3)
+            [[ "$polkitd_uid" =~ ^[0-9]+$ && "$polkitd_gid" =~ ^[0-9]+$ ]] || {
+                echo "Missing valid polkitd system account" >&2
+                exit 1
+            }
+            chown "$polkitd_uid:$polkitd_gid" var/lib/polkit-1
+            chmod 0755 var/lib/polkit-1
         fi
         if [[ -x usr/libexec/dbus-daemon-launch-helper ]]; then
             messagebus_gid=$(grep "^messagebus:" etc/group | cut -d: -f3)
@@ -10573,10 +13255,19 @@ print_qemu_command() {
     [[ "$arch" == aarch64 ]] || command+=(-machine accel=kvm:tcg)
     # The read-only SquashFS root is mounted directly; only the writable overlay
     # consumes guest RAM during boot.
-    [[ ${DESKTOP_CHOICE:-none} != mate && ${DESKTOP_CHOICE:-none} != lxde && ${DESKTOP_CHOICE:-none} != fluxbox ]] || memory=6144
+    if [[ ${DESKTOP_CHOICE:-none} != none ]]; then
+        memory=4096
+        [[ ${QEMU_CPUS:-2} =~ ^[1-9][0-9]*$ ]] && (( ${QEMU_CPUS:-2} <= 64 )) || QEMU_CPUS=2
+        qemu_cpus=${QEMU_CPUS:-2}
+    fi
     [[ "$qemu_cpus" =~ ^[1-9][0-9]*$ ]] && (( qemu_cpus <= 64 )) || qemu_cpus=1
     command+=(-m "$memory" -smp "$qemu_cpus")
-    if [[ ${DESKTOP_CHOICE:-none} == mate || ${DESKTOP_CHOICE:-none} == lxde || ${DESKTOP_CHOICE:-none} == fluxbox ]]; then command+=(-vga std)
+    # X11 desktops require a graphical QEMU display. -nographic redirects the
+    # VGA console away and leaves Cinnamon/Muffin rendering invisible.
+    if [[ ${DESKTOP_CHOICE:-none} != none ]]; then
+        # A USB tablet gives QEMU an absolute pointer without mouse-capture
+        # quirks; the guest kernel and Xorg evdev driver support this device.
+        command+=(-vga std -usb -device usb-tablet)
     else command+=(-nographic); fi
     local qemu_boot_log="$IMAGES/qemu-boot.log"
     # Route the emulated serial console to a file. The bootloader and kernel
@@ -10584,7 +13275,7 @@ print_qemu_command() {
     command+=(-serial "file:$qemu_boot_log")
     [[ ${DESKTOP_CHOICE:-none} != none ]] || command+=(-monitor stdio)
     local qemu_audio=no
-    if [[ ${DESKTOP_CHOICE:-none} == mate || ${DESKTOP_CHOICE:-none} == lxde || ${DESKTOP_CHOICE:-none} == fluxbox ]]; then
+    if [[ ${DESKTOP_CHOICE:-none} == mate || ${DESKTOP_CHOICE:-none} == lxde || ${DESKTOP_CHOICE:-none} == fluxbox || ${DESKTOP_CHOICE:-none} == cinnamon ]]; then
         # The PulseAudio backend makes QEMU abort when the host has no
         # PulseAudio / PipeWire-Pulse server. Add virtual HDA only if the
         # backend is reachable now; booting the ISO must not depend on audio.
@@ -10619,7 +13310,7 @@ print_qemu_command() {
             uefi|refind|efistub|systemd-boot)
                 case "$arch" in
                     x86_64)
-                        candidates=(/usr/share/ovmf/OVMF.fd /usr/share/OVMF/OVMF.fd /usr/share/edk2/ovmf/OVMF.fd)
+                        candidates=(/usr/share/ovmf/OVMF.fd /usr/share/qemu/OVMF.fd /usr/share/OVMF/OVMF.fd /usr/share/edk2/ovmf/OVMF.fd)
                         pairs=(/usr/share/OVMF/OVMF_CODE_4M.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/edk2/ovmf/OVMF_CODE.fd) ;;
                     i686)
                         candidates=(/usr/share/OVMF/OVMF32.fd /usr/share/edk2/ia32/OVMF.fd)
@@ -10676,9 +13367,11 @@ print_qemu_command() {
             printf '%s\n' "$(tr_text 'After logging in in the QEMU window, the desktop starts automatically.' 'Prisijungus QEMU lange darbalaukis pasileis automatiškai.')"
         else
             case ${DESKTOP_CHOICE:-none} in
+                x11) printf '%s\n' "$(tr_text 'After logging in in the QEMU window, run: startx' 'Prisijungęs QEMU lange paleisk: startx')" ;;
                 mate) printf '%s\n' "$(tr_text 'After logging in in the QEMU window, run: startmate' 'Prisijungęs QEMU lange paleisk: startmate')" ;;
                 fluxbox) printf '%s\n' "$(tr_text 'After logging in in the QEMU window, run: startfluxbox' 'Prisijungęs QEMU lange paleisk: startfluxbox')" ;;
                 lxde) printf '%s\n' "$(tr_text 'After logging in in the QEMU window, run: startlxde' 'Prisijungęs QEMU lange paleisk: startlxde')" ;;
+                cinnamon) printf '%s\n' "$(tr_text 'After logging in in the QEMU window, run: startcinnamon' 'Prisijungęs QEMU lange paleisk: startcinnamon')" ;;
             esac
         fi
     fi
@@ -10710,6 +13403,7 @@ self_test() {
     TARGET_ARCH=x86_64; architecture
     PACKAGE_MANAGER=none
     (PACKAGE_MANAGER=invalid; if validate; then exit 1; fi)
+    (TARGET_ARCH=x86_64 DESKTOP_CHOICE=x11 TOOLS_CHOICE=gnu INIT_CHOICE=openrc; validate)
     (TARGET_ARCH=x86_64 DESKTOP_CHOICE=mate TOOLS_CHOICE=gnu INIT_CHOICE=openrc PKG_GEANY=yes PKG_FIREFOX=yes; validate)
     (DESKTOP_CHOICE=xfce; if validate; then exit 1; fi)
     # Exercise GNU desktop profiles across every supported shell, init,
@@ -10964,12 +13658,15 @@ main() {
         --build|--resume|--fresh) session_choose "$1" ;;
         *) die "$(tr_text 'Unknown argument. Usage: --help' 'Nežinomas argumentas. Naudojimas: --help')" ;;
     esac
-    if [[ "$USER_PASSWORD_HASH" == '!' ]]; then
+    if [[ "$USER_PASSWORD_HASH" == '!' || "$ROOT_PASSWORD_HASH" == '!' ]]; then
         if [[ -t 0 && -t 1 ]]; then
             system_password_prompt
         else
-            die "$(tr_text 'A login password is required. Set ROOT_PASSWORD_HASH=$(openssl passwd -6) and rerun; the default user will use the same password unless USER_PASSWORD_HASH is explicitly set.' 'Reikia prisijungimo slaptažodžio. Nustatyk ROOT_PASSWORD_HASH=$(openssl passwd -6) ir kartok; numatytasis vartotojas naudos tą patį slaptažodį, jei aiškiai nenustatytas USER_PASSWORD_HASH.')"
+            die "$(tr_text 'Separate USER_PASSWORD_HASH and ROOT_PASSWORD_HASH are required. Generate each with openssl passwd -6, or run interactively to set them.' 'Reikia atskirų USER_PASSWORD_HASH ir ROOT_PASSWORD_HASH. Sugeneruok abu su openssl passwd -6 arba paleisk interaktyviai.')"
         fi
+    fi
+    if [[ -z ${RESUME_BASE:-} && "$USER_PASSWORD_HASH" == "$ROOT_PASSWORD_HASH" ]]; then
+        die "$(tr_text 'Root and user password hashes must differ. Choose separate passwords.' 'Root ir vartotojo slaptažodžių hash turi skirtis. Pasirink atskirus slaptažodžius.')"
     fi
     PKG_NEOFETCH=yes
     validate || die "$VALIDATION_ERROR"
@@ -10981,15 +13678,61 @@ main() {
     printf "$(tr_text 'Each stage has its own progress row. Full log: %s/build.log\n' 'Kiekvienas etapas turi atskirą progreso eilutę. Visas žurnalas: %s/build.log\n')" "$BASE"
     local system_log="$BASE/build.log"
     toolchain_workspace
-    local -a stage_names=(01a-binutils 01b-gcc-initial 01c-glibc 01d-gcc-final
-        02-userland "02d-extras-$PKG_NANO-$PKG_NEOFETCH-$PKG_VIM-$PKG_FDISK"
-        "02c-network-tools-$PKG_PING" 02a-login-su-v2 02b-sudo)
+    local -a stage_names=(01a-binutils 01b-gcc-initial 01c-glibc 01d-gcc-final 02-userland)
+    local include_linux_installer=no installer_sources
+    if [[ "$TARGET_ARCH" == x86_64 ]]; then
+        installer_sources="$(dirname -- "${BASH_SOURCE[0]}")/linux-installer"
+        if [[ -s "$installer_sources/main.cpp" && -s "$installer_sources/scripts/install-system.sh" &&
+              -s "$installer_sources/scripts/system-config.sh" && -f "$installer_sources/README.md" ]]; then
+            include_linux_installer=yes
+            stage_names+=(02e-linux-installer-v1)
+        else
+            say "$(tr_text "Skipping LinuxInstaller: missing or incomplete sources in $installer_sources" "LinuxInstaller praleidžiamas: kataloge $installer_sources trūksta šaltinio failų")"
+        fi
+    fi
+    stage_names+=("02d-extras-$PKG_NANO-$PKG_NEOFETCH-$PKG_VIM-$PKG_FDISK"
+        "02c-network-tools-$PKG_PING" 02a-login-su-v3 02b-sudo)
     [[ "$INIT_CHOICE" != systemd ]] || stage_names+=(03-system-bus)
     stage_names+=(03-init-v2
         "03b-wget-$PKG_WGET" "03c-openssh-v1-$PKG_OPENSSH" 03a-package-manager 04-native-gcc 04b-linux-firmware-v2)
     local package name
-    if [[ "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox ]]; then
-        if [[ "$DESKTOP_CHOICE" == mate ]]; then
+    if [[ "$DESKTOP_CHOICE" == x11 || "$DESKTOP_CHOICE" == mate || "$DESKTOP_CHOICE" == lxde || "$DESKTOP_CHOICE" == fluxbox || "$DESKTOP_CHOICE" == cinnamon ]]; then
+        if [[ "$DESKTOP_CHOICE" == x11 ]]; then
+            for package in $(desktop_base_packages); do
+                case "$package" in
+                    mesa) stage_names+=(desktop-mesa-v2) ;;
+                    NetworkManager) stage_names+=(desktop-NetworkManager-v2) ;;
+                    eudev) stage_names+=(desktop-eudev-v2) ;;
+                    upower) stage_names+=(desktop-upower-v2) ;;
+                    xorg-server) stage_names+=(desktop-xorg-server-v2) ;;
+                    harfbuzz) stage_names+=(desktop-harfbuzz-v3) ;;
+                    pango) stage_names+=(desktop-pango-v2) ;;
+                    gdk-pixbuf) stage_names+=(desktop-gdk-pixbuf-v2) ;;
+                    dbus) stage_names+=(desktop-dbus-v4) ;;
+                    libxml2) stage_names+=(desktop-libxml2-v3) ;;
+                    gtk) stage_names+=(desktop-gtk-v2) ;;
+                    sound-mixer) stage_names+=(desktop-sound-mixer-v2) ;;
+                    at-spi2-core) stage_names+=(desktop-at-spi2-core-v3) ;;
+                    glib) stage_names+=(desktop-glib-v2) ;;
+                    pcre2) stage_names+=(desktop-pcre2-v2) ;;
+                    libffi) stage_names+=(desktop-libffi-v2) ;;
+                    zlib) stage_names+=(desktop-zlib-v2) ;;
+                    expat) stage_names+=(desktop-expat-v2) ;;
+                    libX11) stage_names+=(desktop-libX11-v3) ;;
+                    xorgproto) stage_names+=(desktop-xorgproto-v2) ;;
+                    xtrans) stage_names+=(desktop-xtrans-v4) ;;
+                    libxcb) stage_names+=(desktop-libxcb-v2) ;;
+                    libXau) stage_names+=(desktop-libXau-v2) ;;
+                    libXdmcp) stage_names+=(desktop-libXdmcp-v2) ;;
+                    libXi) stage_names+=(desktop-libXi-v2) ;;
+                    libXext) stage_names+=(desktop-libXext-v2) ;;
+                    libXfixes) stage_names+=(desktop-libXfixes-v2) ;;
+                    libXtst) stage_names+=(desktop-libXtst-v2) ;;
+                    libxkbcommon) stage_names+=(desktop-libxkbcommon-v3) ;;
+                    *) stage_names+=("desktop-$package-v1") ;;
+                esac
+            done
+        elif [[ "$DESKTOP_CHOICE" == mate ]]; then
             for package in $(desktop_base_packages) $(mate_packages); do
                 if [[ "$package" == eudev ]]; then stage_names+=(desktop-eudev-v2)
                 elif [[ "$package" == sound-mixer ]]; then stage_names+=(desktop-sound-mixer-v2)
@@ -11009,7 +13752,7 @@ main() {
                 else stage_names+=("desktop-$package-v1"); fi
             done
             stage_names+=("desktop-app-firefox-$PKG_FIREFOX")
-        else
+        elif [[ "$DESKTOP_CHOICE" == fluxbox ]]; then
             for package in $(desktop_base_packages) $(fluxbox_packages); do
                 if [[ "$package" == eudev ]]; then stage_names+=(desktop-eudev-v2)
                 elif [[ "$package" == sound-mixer ]]; then stage_names+=(desktop-sound-mixer-v2)
@@ -11017,12 +13760,59 @@ main() {
                 else stage_names+=("desktop-$package-v1"); fi
             done
             stage_names+=("desktop-app-firefox-$PKG_FIREFOX")
+        elif [[ "$DESKTOP_CHOICE" == cinnamon ]]; then
+            for package in $(desktop_base_packages) $(cinnamon_packages); do
+                case "$package" in
+                    python3.13) stage_names+=(desktop-python3.13-v2) ;;
+                    pycairo) stage_names+=(desktop-pycairo-v1) ;;
+                    pygobject) stage_names+=(desktop-pygobject-v1) ;;
+                    cinnamon-menu-editor) stage_names+=(desktop-cinnamon-menu-editor-v3) ;;
+                    cinnamon-control-center) stage_names+=(desktop-cinnamon-control-center-v2) ;;
+                    eudev) stage_names+=(desktop-eudev-v2) ;;
+                    fontconfig) stage_names+=(desktop-fontconfig-v2) ;;
+                    sound-mixer) stage_names+=(desktop-sound-mixer-v2) ;;
+                    at-spi2-core) stage_names+=(desktop-at-spi2-core-v3) ;;
+                    glib) stage_names+=(desktop-glib-v2) ;;
+                    gobject-introspection) stage_names+=(desktop-gobject-introspection-v5 desktop-glib-introspection-v1) ;;
+                    NetworkManager) stage_names+=(desktop-NetworkManager-v2) ;;
+                    upower) stage_names+=(desktop-upower-v2) ;;
+                    cinnamon-desktop) stage_names+=(desktop-cinnamon-desktop-v5) ;;
+                    muffin) stage_names+=(desktop-muffin-v5) ;;
+                    cinnamon) stage_names+=(desktop-cinnamon-v4) ;;
+                    libnma) stage_names+=(desktop-libnma-v2) ;;
+                    pcre2) stage_names+=(desktop-pcre2-v2) ;;
+                    libffi) stage_names+=(desktop-libffi-v2) ;;
+                    zlib) stage_names+=(desktop-zlib-v2) ;;
+                    dbus) stage_names+=(desktop-dbus-v4) ;;
+                    libxml2) stage_names+=(desktop-libxml2-v3) ;;
+                    expat) stage_names+=(desktop-expat-v2) ;;
+                    libX11) stage_names+=(desktop-libX11-v3) ;;
+                    xorgproto) stage_names+=(desktop-xorgproto-v2) ;;
+                    xtrans) stage_names+=(desktop-xtrans-v4) ;;
+                    libxcb) stage_names+=(desktop-libxcb-v2) ;;
+                    libXau) stage_names+=(desktop-libXau-v2) ;;
+                    libXdmcp) stage_names+=(desktop-libXdmcp-v2) ;;
+                    libXi) stage_names+=(desktop-libXi-v2) ;;
+                    libXext) stage_names+=(desktop-libXext-v2) ;;
+                    libXfixes) stage_names+=(desktop-libXfixes-v2) ;;
+                    libXtst) stage_names+=(desktop-libXtst-v2) ;;
+                    mozjs-115) stage_names+=(desktop-mozjs-115-v2) ;;
+                    cjs) stage_names+=(desktop-cjs-v3) ;;
+                    xapps) stage_names+=(desktop-xapps-v2) ;;
+                    xapp-symbolic-icons) stage_names+=(desktop-xapp-symbolic-icons-v1) ;;
+                    gobject-introspection) ;;
+                    zstd) stage_names+=(desktop-zstd-v2) ;;
+                    libxkbcommon) stage_names+=(desktop-libxkbcommon-v3) ;;
+                    *) stage_names+=("desktop-$package-v1") ;;
+                esac
+            done
+            stage_names+=("desktop-app-firefox-$PKG_FIREFOX")
         fi
         [[ "$PKG_NGINX" != yes ]] || stage_names+=(web-stack-v1)
-        stage_names+=("05-kernel-live-squashfs-v7")
+        stage_names+=("05-kernel-live-squashfs-v8")
     else
         [[ "$PKG_NGINX" != yes ]] || stage_names+=(web-stack-v1)
-        stage_names+=(05-kernel-live-squashfs-v7)
+        stage_names+=(05-kernel-live-squashfs-v8)
     fi
     stage_names+=("06-boot-tools-v2-$BOOT_CHOICE")
     local -a stage_labels=()
@@ -11045,9 +13835,10 @@ main() {
     system_toolchain
     cross_environment
     step '02-userland' userland
+    if [[ "$include_linux_installer" == yes ]]; then step '02e-linux-installer-v1' compile_linux_installer; fi
     step "02d-extras-$PKG_NANO-$PKG_NEOFETCH-$PKG_VIM-$PKG_FDISK" extra_programs
     step "02c-network-tools-$PKG_PING" network_tools
-    step 02a-login-su-v2 login_tools
+    step 02a-login-su-v3 login_tools
     step '02b-sudo' sudo_tools
     if [[ "$INIT_CHOICE" == systemd ]]; then step '03-system-bus' system_bus; fi
     step '03-init-v2' init_system
@@ -11055,11 +13846,11 @@ main() {
     step "03c-openssh-v1-$PKG_OPENSSH" openssh_tools
     step '03a-package-manager' package_manager
     step '04-native-gcc' native_development
-    step '04b-linux-firmware-v2' desktop_firmware
+    step '04b-linux-firmware-v3' desktop_firmware
     graphical_desktop
     desktop_applications
     [[ "$PKG_NGINX" != yes ]] || step web-stack-v1 web_stack
-    step 05-kernel-live-squashfs-v7 kernel
+    step 05-kernel-live-squashfs-v8 kernel
     step "06-boot-tools-v2-$BOOT_CHOICE" boot_tools
     run_quiet "$(tr_text 'System configuration' 'Sistemos konfigūracija')" configure_system
     run_quiet "$(tr_text 'Package configuration' 'Paketų konfigūracija')" configure_packages
