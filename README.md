@@ -2,11 +2,11 @@
 
 **Language:** English | [Lietuvių](README.lt.md)
 
-Build a small Linux system from source with a single Bash script: [`diy-linux.sh`](diy-linux.sh). The script downloads pinned sources, verifies SHA-256 checksums, builds a cross toolchain and root filesystem, and creates boot images. It does not use Buildroot.
+Build an experimental Linux system from source with a single Bash script: [`diy-linux.sh`](diy-linux.sh). Choose the architecture, GNU or BusyBox userland, init system, package manager, boot method, and desktop profile. Desktop options include a terminal-only X11/XTerm profile and Cinnamon 6.6; the builder creates ISO and IMG images from pinned sources verified with SHA-256. It does not use Buildroot.
 
 > **Beta software for learning and experimentation.** DIY Linux is for Linux enthusiasts who want to explore how a system is built and compiled from source. It is inspired by the learning approach of Linux From Scratch (LFS) and source-based systems such as Gentoo, while remaining an independent project with its own recipes. It is not a production-ready distribution; expect unsupported combinations, build failures, and manual troubleshooting.
 
-Builder version: **1.1.210** (`bash diy-linux.sh --version`). The version is shown at startup and is incremented with every script update.
+Builder version: **1.1.235** (`bash diy-linux.sh --version`). The version is shown at startup and is incremented with every script update.
 
 All build recipes are embedded in `diy-linux.sh`. You can copy that file elsewhere and run it on its own. No previous build files or development fixtures are required. Downloads, build directories, and toolchains are created when needed.
 
@@ -84,7 +84,7 @@ This creates an 8 GiB swap file in the working directory and enables it with `su
 | `INIT_CHOICE` | `openrc`, `busybox`, `sysvinit`, `runit`, `dinit`, `s6`, `systemd` | OpenRC works with GNU or BusyBox utilities; BusyBox profiles use BusyBox `getty` and `login` on local and serial consoles. Automatic login still requires GNU utilities. SysVinit, runit, Dinit, s6, and systemd require GNU utilities. Dinit 0.22.1 is a beta release; it also needs host m4 and the target C++ runtime. |
 | `PACKAGE_MANAGER` | `none`, `apt`, `pacman` | APT includes dpkg. Both package manager recipes require GNU utilities. |
 | `BOOT_CHOICE` | `bios`, `uefi`, `syslinux`, `lilo`, `refind`, `efistub`, `limine`, `systemd-boot`, `none` | `bios` and `uefi` select GRUB. LILO is legacy x86 BIOS and creates a raw IMG only; creating it uses sudo for a temporary loop device. |
-| `DESKTOP_CHOICE` | `none`, `mate`, `lxde`, `fluxbox` | MATE, LXDE, and Fluxbox Xorg profiles are built from pinned source archives; supported combinations depend on architecture and userland. |
+| `DESKTOP_CHOICE` | `none`, `x11`, `mate`, `lxde`, `fluxbox`, `cinnamon` | `x11` builds Xorg + XTerm without a desktop environment. MATE, LXDE, Fluxbox, and Cinnamon 6.6 are Xorg desktops. Cinnamon currently requires x86_64 and GNU utilities; its screensaver is omitted. Firefox is optional in MATE, LXDE, Fluxbox, and Cinnamon. |
 | `WITH_GCC` | `yes`, `no` | Include a native compiler in the final system. A cross compiler is built in either case. |
 | `NETWORK` | `yes`, `no` | Enable DHCP networking. |
 | `AUTOLOGIN` | `yes`, `no` | `no` by default. When enabled, automatically opens the configured `USER_NAME` account on local `tty1` without a password prompt. Requires GNU utilities; the serial console still requires login. Anyone with physical access can use the account, and `sudo` continues to ask for its password. |
@@ -94,7 +94,7 @@ This creates an 8 GiB swap file in the working directory and enables it with `su
 
 Neofetch and the welcome message are always included in new builds. Bash is also included to run Neofetch even when another login shell is selected. `PKG_NEOFETCH=no` does not disable this required component.
 
-Other useful settings are `SYSTEM_NAME`, `USER_NAME`, `WORK_DIR`, `JOBS`, `AUTO_INSTALL_DEPS`, and `COLOR`. `JOBS` defaults to 1; the bootstrap GCC stages explicitly use one compilation job to reduce memory pressure. Use `COLOR=never` or `NO_COLOR=1` to disable colors.
+Other useful settings are `SYSTEM_NAME`, `USER_NAME`, `WORK_DIR`, `JOBS`, `AUTO_INSTALL_DEPS`, and `COLOR`. `JOBS` defaults to about 80% of the host's online CPU count, rounded and capped at the available CPUs; the bootstrap GCC stages explicitly use one compilation job to reduce memory pressure. Use `COLOR=never` or `NO_COLOR=1` to disable colors.
 
 See exact pinned package versions with:
 
