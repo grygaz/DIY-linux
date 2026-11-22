@@ -2,11 +2,11 @@
 
 **Kalba:** [English](README.md) | Lietuvių
 
-Nedidelės Linux sistemos kūrimas iš šaltinių vienu Bash skriptu: [`diy-linux.sh`](diy-linux.sh). Skriptas atsisiunčia nustatytų versijų šaltinius, patikrina SHA-256 kontrolines sumas, sukuria kryžminio kompiliavimo įrankius (toolchain), šakninę failų sistemą ir paleidimo atvaizdus. Buildroot nenaudojamas.
+Eksperimentinės Linux sistemos kūrimas iš šaltinių vienu Bash skriptu: [`diy-linux.sh`](diy-linux.sh). Pasirink architektūrą, GNU arba BusyBox naudotojo aplinką, init sistemą, paketų tvarkyklę, paleidyklę ir darbalaukio profilį. Galima rinktis X11/XTerm terminalą be darbastalio aplinkos arba Cinnamon 6.6; skriptas kuria ISO ir IMG atvaizdus iš nustatytų bei SHA-256 patikrintų šaltinių. Buildroot nenaudojamas.
 
 > **Beta versija mokymuisi ir eksperimentams.** DIY Linux skirta Linux entuziastams, norintiems suprasti, kaip sistema kuriama ir kompiliuojama iš šaltinių. Projektas semiasi įkvėpimo iš Linux From Scratch (LFS) mokymosi principo ir tokių iš šaltinių kuriamų sistemų kaip Gentoo, tačiau yra nepriklausomas ir turi savus receptus. Tai nėra paruošta kasdieniam naudojimui distribucija: gali pasitaikyti nepalaikomų derinių, kompiliavimo klaidų ir prireikti rankinio taisymo.
 
-Scenarijaus versija: **1.1.210** (`bash diy-linux.sh --version`). Versija rodoma paleidus scenarijų ir didinama su kiekvienu scenarijaus atnaujinimu.
+Scenarijaus versija: **1.1.235** (`bash diy-linux.sh --version`). Versija rodoma paleidus scenarijų ir didinama su kiekvienu scenarijaus atnaujinimu.
 
 Visi kūrimo receptai įtraukti į `diy-linux.sh`. Šį failą galima perkelti kitur ir paleisti atskirai. Ankstesni kūrimo ar bandymų failai nereikalingi. Atsisiuntimų, kompiliavimo ir toolchain katalogai sukuriami prireikus.
 
@@ -84,7 +84,7 @@ bash diy-linux.sh --prepare-swap 8
 | `INIT_CHOICE` | `openrc`, `busybox`, `sysvinit`, `runit`, `dinit`, `s6`, `systemd` | OpenRC veikia su GNU arba BusyBox įrankiais; BusyBox profilyje vietinės ir nuosekliosios konsolės naudoja BusyBox `getty` ir `login`. Automatiniam prisijungimui vis tiek reikia GNU įrankių. SysVinit, runit, Dinit, s6 ir systemd reikia GNU įrankių. Dinit 0.22.1 yra beta versija; papildomai reikia šeimininko m4 ir tikslinės C++ bibliotekos. |
 | `PACKAGE_MANAGER` | `none`, `apt`, `pacman` | APT apima dpkg. Abiem paketų tvarkyklių receptams reikia GNU įrankių. |
 | `BOOT_CHOICE` | `bios`, `uefi`, `syslinux`, `lilo`, `refind`, `efistub`, `limine`, `systemd-boot`, `none` | `bios` ir `uefi` pasirenka GRUB. LILO yra senoji x86 BIOS paleidyklė, kurianti tik raw IMG; kūrimui sudo prijungia laikiną loop įrenginį. |
-| `DESKTOP_CHOICE` | `none`, `mate`, `lxde`, `fluxbox` | MATE, LXDE ir Fluxbox Xorg profiliai kuriami iš nustatytų šaltinių archyvų; galimi deriniai priklauso nuo architektūros ir įrankių. |
+| `DESKTOP_CHOICE` | `none`, `x11`, `mate`, `lxde`, `fluxbox`, `cinnamon` | `x11` įdiegia Xorg ir XTerm be darbastalio aplinkos. MATE, LXDE, Fluxbox ir Cinnamon 6.6 yra Xorg darbastaliai. Cinnamon šiuo metu reikia x86_64 ir GNU įrankių; ekrano užsklanda neįtraukiama. Firefox galima papildomai rinktis MATE, LXDE, Fluxbox ir Cinnamon profiliuose. |
 | `WITH_GCC` | `yes`, `no` | Įtraukti kompiliatorių į galutinę sistemą. Kryžminis kompiliatorius kuriamas abiem atvejais. |
 | `NETWORK` | `yes`, `no` | Įjungti DHCP tinklą. |
 | `AUTOLOGIN` | `yes`, `no` | Pagal nutylėjimą `no`. Įjungus, vietinėje `tty1` konsolėje automatiškai atveriama `USER_NAME` paskyra neprašant slaptažodžio. Reikia GNU įrankių; nuosekliojo ryšio konsolė vis tiek prašo prisijungti. Fizinę prieigą turintis asmuo galės naudotis paskyra, o `sudo` ir toliau prašys slaptažodžio. |
@@ -94,7 +94,7 @@ bash diy-linux.sh --prepare-swap 8
 
 Neofetch ir pasisveikinimo pranešimas visada įtraukiami į naujas sistemas. Bash taip pat įtraukiamas Neofetch vykdyti, net pasirinkus kitą prisijungimo apvalkalą. `PKG_NEOFETCH=no` šio privalomo komponento neišjungia.
 
-Kiti naudingi nustatymai: `SYSTEM_NAME`, `USER_NAME`, `WORK_DIR`, `JOBS`, `AUTO_INSTALL_DEPS` ir `COLOR`. Numatytasis `JOBS` yra 1; pradinio toolchain GCC etapai visada vykdomi viena kompiliavimo užduotimi, kad mažiau apkrautų atmintį. Spalvas išjungia `COLOR=never` arba `NO_COLOR=1`.
+Kiti naudingi nustatymai: `SYSTEM_NAME`, `USER_NAME`, `WORK_DIR`, `JOBS`, `AUTO_INSTALL_DEPS` ir `COLOR`. Numatytasis `JOBS` yra apie 80 % šeimininko procesorių, suapvalintas ir apribotas jų skaičiumi; pradinio toolchain GCC etapai visada vykdomi viena kompiliavimo užduotimi, kad mažiau apkrautų atmintį. Spalvas išjungia `COLOR=never` arba `NO_COLOR=1`.
 
 Tikslias nustatytas paketų versijas parodo:
 
